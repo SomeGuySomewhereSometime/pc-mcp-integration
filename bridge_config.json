@@ -98,5 +98,8 @@
       "/home/user/.profile",
       "/home/user/.bash_profile"
     ]
+  },
+  "desktop": {
+    "enabled": true
   }
 }

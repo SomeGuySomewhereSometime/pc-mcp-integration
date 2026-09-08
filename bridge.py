@@ -59,7 +59,7 @@ BRIDGE_CONFIG = load_bridge_config()
 
 app = FastAPI(
     title="ChatGPT Local Bridge",
-    version="0.4.1",
+    version="0.5.0",
 )
 
 

@@ -14,10 +14,98 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.4.1
+## Local Development Bridge 0.5.0
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
+
+## Desktop observation and control
+
+This extension runs inside the existing Bridge MCP, using the same tunnel and
+ChatGPT connection. No installer or other MCP is replaced. The Sol model in
+ChatGPT calls structured tools; it does not need to generate input scripts or
+use a second model. Refresh the existing connection's tool catalog after deployment.
+
+Four additional tools are available when `desktop.enabled` is true in the local
+configuration:
+
+- `desktop_status`: capabilities, limits and session state, without starting control.
+- `desktop_observe`: compact AT-SPI window/element descriptions with a fresh snapshot.
+  Filter by application or window; default traversal expands active windows. Names,
+  text, states, actions, bounds and values are returned with explicit truncation.
+- `desktop_act`: execute an explicit short batch and return receipts plus a new
+  observation. Accessible actions include activate, set_text, focus, select and
+  scroll_into_view. Raw actions include move, click, drag, scroll, key and type_text.
+- `desktop_session`: start/status/stop a user-approved GNOME RemoteDesktop session
+  for keyboard, pointer and one monitor. Start returns pending while GNOME asks the
+  local user to select the monitor and permit control. No permission token is persisted.
+
+Start with `desktop_observe(application="...")`. Use element IDs from that exact
+snapshot. Accessible operations use AT-SPI directly and do not require a raw-input
+session. For graphical canvases, start the session, wait for active, then request
+`desktop_observe(..., screenshot=true)`. It returns the selected monitor as a native
+MCP PNG plus its pixel and logical sizes. Raw coordinates are normalized 0..1 within
+that image, with the origin at its top left. Do not use global screen coordinates.
+Pass the session_id and snapshot_id to `desktop_act`; screenshot=true returns the
+resulting image in the same tool call. Monitor selection and mapping remain bound
+to that session. There is no automatic click fallback for a failed semantic action.
+
+Snapshot IDs are single-use for actions, expire after 120 seconds, and are invalidated
+by another observation. Target identity, state, text and geometry are rechecked before
+each accessible action. The window must be active except for an explicit focus action.
+Batch only predictable operations: if a later target changes, execution stops and
+the completed actions are reported without rollback. A transport timeout is an unknown
+outcome, never an invitation to replay input. Observe again before retrying.
+
+`executed` reports that an operation was accepted; `verified` requires readback
+(currently set_text and focus). Inspect the returned window/image for the broader
+task outcome. A successful click alone does not prove a file was saved. At most 8
+actions, 400 visible elements, 4000 characters for set_text and 256 for raw type_text
+are allowed per request. `type_text` inserts through an observed focused editable
+element when available, replacing its selection and verifying Unicode text without
+accessing the clipboard. Otherwise it uses keyboard events for ASCII; unsupported
+Unicode is refused instead of silently losing characters. Password text is not returned.
+UI content is untrusted data.
+
+The helper uses `/usr/bin/python3`, GI AT-SPI, D-Bus and GStreamer plugins already
+installed on this host. Its protocol uses private parent-owned pipes, not a new socket,
+port or tunnel. It cannot execute supplied code. The MCP virtualenv remains unchanged.
+The RemoteDesktop backend uses the documented D-Bus Notify methods; it does not
+claim to implement libei. The backend retains the compositor's permission session
+without granting access to `/dev/uinput` or changing device permissions. Frames come
+through the authorized PipeWire stream (at most 5 fps), not repeated screenshot dialogs.
+Sessions close on revocation, process exit, explicit stop or 15 minutes of inactivity.
+Shell sandboxing remains unchanged. Desktop tools control the signed-in desktop;
+filesystem sandbox rules are not a containment boundary for graphical applications.
+
+Blender and Unity retain their dedicated MCPs as the source of truth for editing
+their projects. Accessibility and visual input complement those tools. AT-SPI coverage
+depends on each application and toolkit; an incomplete tree is reported, not invented.
+
+### Desktop validation and recovery
+
+Run protocol tests with system Python (GI), and existing/MCP tests with the virtualenv:
+
+```sh
+/usr/bin/python3 -B -m unittest -v test_desktop
+BRIDGE_SANDBOX_TESTS=1 BRIDGE_SYSTEMD_TESTS=1 BRIDGE_WORKSPACE=/home/user .venv/bin/python -B -m unittest -v
+BRIDGE_DESKTOP_TESTS=1 BRIDGE_WORKSPACE=/home/user .venv/bin/python -B -m unittest -v test_desktop_live
+BRIDGE_WORKSPACE=/home/user .venv/bin/python -B check_desktop_portal.py
+```
+
+The live tests create a disposable `Bridge Desktop Test` GTK window; the last one
+requires GNOME consent and operates only controls in that test window. It stops the
+session and closes the fixture even after failure. It does not test the ChatGPT model.
+
+The pre-extension version is preserved in the Git tag
+`backup/pre-desktop-20260908T220345Z` (commit `92c4151`) and the local archive and
+Git bundle at `/home/user/chatgpt-local-bridge-backups/pre-desktop-20260908T220345Z`.
+The manifest records the archive SHA-256. The archive excludes the virtualenv and
+caches; `requirements.lock` records dependencies. To disable desktop tools, set
+`desktop.enabled` to false and restart only the Bridge service. To roll back code,
+restore the backup into a separate directory, inspect any subsequent changes, then
+replace the affected Bridge files and restart the same service. Do not reset or
+overwrite unrelated work. Unity/Blender services and installers are unchanged.
 
 Start each ChatGPT session with `get_session_context(cwd=<project>)` and inspect
 the live tool inventory. Global AGENTS.md is also included in MCP initialization.
@@ -145,3 +233,15 @@ was refused. A live Bridge MCP child failure recovered in 5.78 seconds while the
 original Unity and Blender Editors remained open. Full logout/login, reboot and
 hung-process recovery were not exercised or added. Tool names and input schemas
 are unchanged, so this patch does not require another ChatGPT catalog refresh.
+
+## 0.5.0 validation status
+
+Installed code advertises 24 tools and passed a real MCP text action/readback and
+a stale-snapshot error test. All 29 pre-existing host tests, 10 desktop protocol
+tests, 4 MCP unit tests and the AT-SPI fixture test passed. The portal fixture
+passed monitor capture, keyboard, Unicode insertion, click, drag and closure before
+a final capture-startup adjustment. The repeat of that adjustment and scroll test
+requires GNOME consent and remains pending; the last request timed out. Refresh
+the ChatGPT connection and validate a Sol action before treating the full ChatGPT
+workflow as proven. Firefox was running but absent by name from the current AT-SPI
+application inventory; no browser settings were changed.

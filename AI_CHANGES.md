@@ -218,3 +218,42 @@ Não inclui chaves, sessões/login, autorização da conta ChatGPT, binários ou
 Unity/Blender. Os locks dependem dos distribuidores dos pacotes; não são um arquivo
 offline. Não foi executada uma recuperação numa máquina limpa. A instalação em
 funcionamento e as contas dos túneis não foram alteradas por este backup.
+# 2026-09-08 — Desktop observation and control in the installed Bridge
+
+- Request: preserve the current version locally and on GitHub, then implement desktop
+  control in the installed Bridge, leaving installers unchanged.
+- Backup: verified local archive and Git bundle in
+  `/home/user/chatgpt-local-bridge-backups/pre-desktop-20260908T220345Z`; annotated
+  GitHub tag `backup/pre-desktop-20260908T220345Z` resolves to `92c4151f308dd0b768475a45b4de3e2b0660359c`.
+- Changes: desktop.py (bounded private helper client), desktop_worker.py (AT-SPI and
+  GNOME RemoteDesktop/PipeWire), four MCP tools in mcp_server.py, version 0.5.0,
+  desktop.enabled configuration, protocol/MCP/live tests, disposable GTK fixture,
+  manual-consent portal acceptance, and README integration/recovery instructions.
+- Behavior: snapshots bound to observations, revalidated element targets, short
+  explicit action batches, partial failure receipts, Unicode editable-text readback,
+  monitor-relative visual input, native MCP PNG results, bounded parent-owned session
+  and explicit GNOME consent. No new tunnel, installer, API model or runtime dependency.
+- Validation before deployment: all 29 existing tests passed with real Bubblewrap
+  and systemd checks; 10 desktop protocol tests and 4 MCP output/configuration tests
+  passed. Real GTK fixture passed text readback, button result, checkbox and stale ID
+  refusal. Portal fixture passed live monitor image, real key, Unicode insertion,
+  click, slider drag (0 to 85), and refusal after session closure. PNG inspected.
+- Limitations: final ChatGPT catalog refresh and use of the new tools by Sol remain
+  to be verified in the user's conversation. Single selected monitor per session;
+  app-specific AT-SPI coverage varies. Raw non-ASCII key events are refused; Unicode
+  text uses an observed editable field. Existing filesystem sandbox remains intact,
+  but it is not a containment boundary for user-authorized desktop control.
+
+- Deployment verification: installed in /home/user/chatgpt-local-bridge; restarted only
+  mcp-tunnel-chatgpt-local-bridge.service. healthz and readyz returned HTTP 200.
+  A fresh MCP wire session from the installed code listed 24 tools and passed
+  Unicode text readback plus a model-readable stale-snapshot error.
+- Follow-up diagnostics: Firefox is running but no application named Firefox is
+  registered in the current AT-SPI inventory. This is accessibility coverage, not
+  a Firefox prohibition in the Bridge. No Firefox preferences were changed.
+- Remaining acceptance: the initial portal test passed keyboard, Unicode insertion,
+  click, drag and session closure. A subsequent startup intermittently received no
+  frame. The final code adds bounded event-loop pumping and disables sink preroll;
+  its live repeat and the added scroll assertion await local GNOME consent (last
+  permission request timed out). Do not call that final repeat passed. ChatGPT
+  Refresh and a real Sol action using the new catalog are also pending.
