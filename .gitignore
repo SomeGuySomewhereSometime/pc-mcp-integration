@@ -4,3 +4,13 @@ __pycache__/
 *.bak
 *.png
 .pytest_cache/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+credentials/
+auth.json
+*.log
+backups/

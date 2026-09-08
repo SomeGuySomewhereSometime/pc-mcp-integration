@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /home/user/.local/share/uv/tools/blender-mcp/bin/python -B /home/user/.local/lib/mcp-integration/mcp-services.py "$@"

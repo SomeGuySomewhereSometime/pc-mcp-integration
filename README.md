@@ -1,4 +1,20 @@
-# Local Development Bridge 0.4.1
+# PC MCP integration
+
+Private backup of the three MCP integrations used to reach this computer from
+ChatGPT: Local Dev Bridge, Unity AI Game Developer and Blender MCP.
+
+The repository contains the Bridge source, dependency locks, launchers, process
+supervisor, three user systemd services, tunnel profiles with credential file
+references, Unity MCP settings/package versions, the installed Blender addon and
+global agent instructions. See [RESTORE.md](RESTORE.md) for the installation map
+and recovery procedure. The snapshot targets the current `/home/user` layout.
+
+Access keys, login sessions and cloud-side ChatGPT connections must be retained
+separately. Unity projects, Blender scenes, editor binaries and virtual environments
+are not part of this integration backup. Publishing this repository does not
+change the running installation or the account associated with the tunnels.
+
+## Local Development Bridge 0.4.1
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.

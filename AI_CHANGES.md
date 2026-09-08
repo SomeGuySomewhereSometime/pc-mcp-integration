@@ -186,3 +186,35 @@ Corrigir os três problemas da segunda auditoria, validar a recuperação e prep
 
 ### Resultado e limites
 Correções ativas, sem alterações de cenas, contas, credenciais, túneis ou addons. A independência de aplicações foi comprovada com processo descartável e os mesmos caminhos de lançamento/systemd, sem fechar/reabrir os Editors. O arranque foi validado em serviços com ambiente limpo; não foi feito logout/login ou reboot real. Supervisão continua orientada à saída de processos; não foi acrescentado reinício automático por simples lentidão/hang. Handles app_close permanecem locais à sessão, como anteriormente. Preparado o primeiro commit local do Bridge, sem remote ou push.
+
+## 2026-09-08 — Backup dos três MCPs para GitHub privado
+
+### Tarefa
+Guardar a integração usada para aceder ao PC, conforme pedido do utilizador, num
+novo repositório privado `SomeGuySomewhereSometime/pc-mcp-integration`.
+
+### Alterações
+- README passou a apresentar o conjunto Bridge/Unity/Blender; RESTORE.md documenta
+  o mapa de instalação, dependências, recuperação e elementos externos necessários.
+- `ops/config/` guarda os três perfis com referências a ficheiros de chaves,
+  instruções globais, inventário de versões/hashes, entrada Blender local opcional
+  e configurações/pacotes MCP Unity. Token Unity omitido; 114 ferramentas ativas preservadas.
+- `ops/bin/mcp-services` guarda o comando instalado. `ops/vendor/blender-mcp/`
+  guarda a cópia exata do addon 1.6/protocolo 5 e a licença MIT original.
+- `.gitignore` exclui ficheiros usuais de credenciais, ambientes e backups.
+
+### Verificação
+- Cópias dos quatro scripts operacionais e três serviços correspondem à instalação;
+  addon e instruções globais também foram comparados byte a byte.
+- O blob Git do addon instalado corresponde ao upstream verificado no momento da cópia.
+- Validação sintática de Python, JSON, YAML, TOML e launcher shell passou. Confirmados
+  os três campos api_key como referências file:, token Unity vazio e cinco ferramentas
+  de estado/screenshots ativas. Pesquisa de padrões de credenciais sem ocorrências.
+- Os 29 testes do Bridge tinham passado antes deste empacotamento; o código de
+  execução do Bridge e os scripts operacionais não foram alterados nesta tarefa.
+
+### Limites
+Não inclui chaves, sessões/login, autorização da conta ChatGPT, binários ou projetos
+Unity/Blender. Os locks dependem dos distribuidores dos pacotes; não são um arquivo
+offline. Não foi executada uma recuperação numa máquina limpa. A instalação em
+funcionamento e as contas dos túneis não foram alteradas por este backup.

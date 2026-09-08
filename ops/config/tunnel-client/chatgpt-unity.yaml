@@ -1,0 +1,16 @@
+config_version: 1
+control_plane:
+  base_url: https://api.openai.com
+  tunnel_id: tunnel_6a9f2bbbdd1c81918f0de8a541d0cd73
+  api_key: file:/home/user/.config/mcp-integration/credentials/chatgpt-unity.key
+health:
+  listen_addr: 127.0.0.1:8081
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json
+mcp:
+  server_urls:
+  - channel: main
+    url: http://127.0.0.1:22153/p/4964095b

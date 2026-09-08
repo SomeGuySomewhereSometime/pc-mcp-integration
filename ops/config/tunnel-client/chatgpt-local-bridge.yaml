@@ -1,0 +1,16 @@
+config_version: 1
+control_plane:
+  base_url: https://api.openai.com
+  tunnel_id: tunnel_6a9ef916764c8191bd510a80a529f0a5
+  api_key: file:/home/user/.config/mcp-integration/credentials/chatgpt-local-bridge.key
+health:
+  listen_addr: 127.0.0.1:8080
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json
+mcp:
+  commands:
+  - channel: main
+    command: /usr/bin/python3 /home/user/.local/lib/mcp-integration/launch.py bridge

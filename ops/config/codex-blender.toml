@@ -1,0 +1,3 @@
+[mcp_servers.blender]
+command = "/usr/bin/python3"
+args = ["/home/user/.local/lib/mcp-integration/launch.py", "blender"]

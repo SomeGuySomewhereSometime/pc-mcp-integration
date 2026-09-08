@@ -1,0 +1,16 @@
+config_version: 1
+control_plane:
+  base_url: https://api.openai.com
+  tunnel_id: tunnel_6a9f32e1cc1881918280677ef30fd175
+  api_key: file:/home/user/.config/mcp-integration/credentials/chatgpt-blender.key
+health:
+  listen_addr: 127.0.0.1:8082
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json
+mcp:
+  commands:
+  - channel: main
+    command: /usr/bin/python3 /home/user/.local/lib/mcp-integration/launch.py blender

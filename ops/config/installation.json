@@ -1,0 +1,47 @@
+{
+  "captured_at": "2026-09-08T04:06:09.651039+00:00",
+  "scope": "Three MCP integrations for this PC; runtime credentials and ChatGPT account authorization are external.",
+  "home": "/home/user",
+  "bridge_root": "/home/user/chatgpt-local-bridge",
+  "unity_project": "/home/user/Projects/ExampleGame",
+  "versions": {
+    "bridge": "0.4.1",
+    "bridge_python": "3.14.4",
+    "bridge_mcp": "2.2.0",
+    "blender_mcp": "1.9.1",
+    "blender_mcp_python": "3.12.13",
+    "blender_addon": "1.6",
+    "blender_addon_protocol": 5,
+    "blender_editor": "5.2.1 LTS (Snap)",
+    "unity_editor": "6000.6.0f1",
+    "unity_plugin": "0.90.0",
+    "unity_mcp_server": "9.2.5",
+    "tunnel_client": "0.0.14+0f870e50a973fa820d4c409000059e181e8d242b",
+    "uv": "0.12.10",
+    "bubblewrap": "0.11.1",
+    "systemd": "259.5-0ubuntu3.4"
+  },
+  "tool_counts": {
+    "bridge": 20,
+    "blender": 30,
+    "unity": 114
+  },
+  "blender": {
+    "addon_path": "/home/user/.config/blender/5.2/scripts/addons/blender_mcp.py",
+    "addon_sha256": "f43469c8518c7021e0060e32cfe52e3beb126b0f62fbae7293106642a3ebda89",
+    "upstream": "https://github.com/ahujasid/blender-mcp",
+    "host": "127.0.0.1",
+    "port": 9876,
+    "telemetry": "Disabled by the server launcher. Addon consent was set to false and preferences saved during the integration audit."
+  },
+  "binaries": {
+    "tunnel-client": {
+      "path": "/home/user/.local/bin/tunnel-client",
+      "sha256": "472eb9dd9dd625b4e6023c3b4a5736b3a2e5a1b6dbe9338e001887a64ec992a6"
+    },
+    "uv": {
+      "path": "/home/user/.local/bin/uv",
+      "sha256": "d81fcbac0a85c070a16cd3e8f3c1ef3b5592deda01a84234bec04a7f3c7105fe"
+    }
+  }
+}
