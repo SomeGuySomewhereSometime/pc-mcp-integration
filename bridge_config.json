@@ -1,0 +1,102 @@
+{
+  "applications": {
+    "firefox": {
+      "executable": "/usr/bin/firefox",
+      "allow_args": false
+    },
+    "chrome": {
+      "executable": "/usr/bin/google-chrome",
+      "allow_args": false
+    },
+    "text-editor": {
+      "executable": "/usr/bin/gnome-text-editor",
+      "allow_args": false
+    },
+    "files": {
+      "executable": "/usr/bin/nautilus",
+      "allow_args": false
+    },
+    "blender": {
+      "executable": "/usr/bin/snap",
+      "fixed_args": [
+        "run",
+        "blender"
+      ],
+      "allow_args": false,
+      "running_executable_prefixes": [
+        "/snap/blender"
+      ]
+    },
+    "unityhub": {
+      "executable": "/usr/bin/unityhub",
+      "allow_args": false
+    },
+    "unity-examplegame": {
+      "executable": "/home/user/Unity/Hub/Editor/6000.6.0f1/Editor/Unity",
+      "fixed_args": [
+        "-projectPath",
+        "/home/user/Projects/ExampleGame"
+      ],
+      "allow_args": false,
+      "cwd": "/home/user/Projects/ExampleGame",
+      "running_executables": [
+        "/home/user/Unity/Hub/Editor/6000.6.0f1/Editor/Unity"
+      ],
+      "running_required_args": [
+        "-projectPath",
+        "/home/user/Projects/ExampleGame"
+      ]
+    }
+  },
+  "process_kill": {
+    "allowed_executables": [
+      "/usr/bin/firefox",
+      "/usr/bin/google-chrome",
+      "/usr/bin/gnome-text-editor",
+      "/usr/bin/nautilus",
+      "/usr/bin/blender",
+      "/usr/bin/unityhub",
+      "/home/user/Unity/Hub/Editor/6000.6.0f1/Editor/Unity"
+    ],
+    "allowed_signals": [
+      "TERM",
+      "INT",
+      "KILL",
+      "HUP"
+    ],
+    "allowed_executable_prefixes": [
+      "/snap/firefox",
+      "/opt/google/chrome",
+      "/opt/unityhub",
+      "/snap/blender"
+    ]
+  },
+  "filesystem": {
+    "denied_paths": [
+      "/home/user/.ssh",
+      "/home/user/.gnupg",
+      "/home/user/.local/share/keyrings",
+      "/home/user/.config/tunnel-client",
+      "/home/user/.config/mcp-integration",
+      "/home/user/.local/state/mcp-integration",
+      "/home/user/.codex/auth.json",
+      "/home/user/.codex/accounts",
+      "/home/user/.codex-chatgpt-web",
+      "/home/user/Projects/ExampleGame/UserSettings/AI-Game-Developer-Config.json"
+    ],
+    "read_only_paths": [
+      "/home/user/chatgpt-local-bridge",
+      "/home/user/AGENTS.md",
+      "/home/user/.config/systemd/user",
+      "/home/user/.config/autostart",
+      "/home/user/.config/blender",
+      "/home/user/.local/bin",
+      "/home/user/.local/lib/mcp-integration",
+      "/home/user/.local/share/uv",
+      "/home/user/.hermes/node",
+      "/home/user/.bashrc",
+      "/home/user/.profile",
+      "/home/user/.bash_profile"
+    ]
+  }
+}
