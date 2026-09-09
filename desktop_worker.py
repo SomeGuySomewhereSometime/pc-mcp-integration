@@ -235,30 +235,46 @@ class Desktop:
                 continue
         return candidates
 
-    def insert_focused_text(self, inserted):
-        """Use observed, focused editable elements for layout-independent Unicode insertion.
+    def focused_text_plan(self):
+        """Inspect the unique focused editor without mutating it.
 
-        No clipboard access. None means unsupported before any mutation; never fall back
-        to key events after an insertion was attempted.
+        semantic=False means AT-SPI focus is trustworthy but its text/caret model is not;
+        a consented portal keyboard fallback can then type without pointer coordinates.
         """
         candidates = self.focused_editable_nodes()
         if len(candidates) != 1:
             return None
         node = candidates[0]
-        text = node.get_text_iface()
-        count = Atspi.Text.get_character_count(text)
-        if count > 20000:
-            raise ValueError('Focused field is too large for bounded insertion readback; use set_text explicitly')
-        original = Atspi.Text.get_text(text, 0, count)
-        selections = Atspi.Text.get_n_selections(text)
-        if selections > 1:
-            raise ValueError('Multiple text selections require an explicit set_text action')
-        start = end = Atspi.Text.get_caret_offset(text)
-        if selections:
-            selection = Atspi.Text.get_selection(text, 0)
-            start, end = selection.start_offset, selection.end_offset
-        if not 0 <= start <= end <= count:
-            raise ValueError('Invalid caret/selection state')
+        try:
+            text = node.get_text_iface()
+            count = Atspi.Text.get_character_count(text)
+            if not 0 <= count <= 20000:
+                return {'node': node, 'semantic': False}
+            original = Atspi.Text.get_text(text, 0, count)
+            selections = Atspi.Text.get_n_selections(text)
+            if selections > 1:
+                return {'node': node, 'semantic': False}
+            start = end = Atspi.Text.get_caret_offset(text)
+            if selections:
+                selection = Atspi.Text.get_selection(text, 0)
+                start, end = selection.start_offset, selection.end_offset
+            if not 0 <= start <= end <= count:
+                return {'node': node, 'semantic': False}
+            return {'node': node, 'semantic': True, 'text': text, 'count': count,
+                    'original': original, 'start': start, 'end': end}
+        except Exception:
+            return {'node': node, 'semantic': False}
+
+    def insert_focused_text(self, inserted):
+        """Insert semantically only when caret state is reliable before mutation.
+
+        None means no mutation was attempted, so a pre-authorized keyboard fallback is safe.
+        """
+        plan = self.focused_text_plan()
+        if not plan or not plan['semantic']:
+            return None
+        node, text = plan['node'], plan['text']
+        original, start, end = plan['original'], plan['start'], plan['end']
         expected = original[:start] + inserted + original[end:]
         editable = node.get_editable_text_iface()
         if start != end and not Atspi.EditableText.delete_text(editable, start, end):
@@ -296,12 +312,19 @@ class Desktop:
             else:
                 if a['kind'] == 'type_text':
                     focused = self.focused_editable_nodes()
-                    if len(focused) == 1:
-                        # Semantic AT-SPI insertion is verified by readback and does
-                        # not need a RemoteDesktop session or screenshot.
-                        continue
                     if len(focused) > 1:
                         raise ValueError('Multiple focused editable fields; use set_text on an explicit element')
+                    plan = self.focused_text_plan() if len(focused) == 1 else None
+                    if plan and plan['semantic']:
+                        # Verified AT-SPI insertion needs neither portal nor screenshot.
+                        continue
+                    if plan:
+                        # Focus is semantic, so keyboard fallback needs user consent but no
+                        # visual targeting/screenshot. No pointer coordinates are involved.
+                        if not self.portal:
+                            raise ValueError('RemoteDesktop portal unavailable')
+                        self.portal.require(session_id)
+                        continue
                 if not self.portal:
                     raise ValueError('RemoteDesktop portal unavailable')
                 self.portal.require(session_id)
@@ -354,18 +377,21 @@ class Desktop:
                         raise RuntimeError('Text readback did not match; stopped subsequent actions')
                 else:
                     receipt = None
+                    used_portal = False
                     try:
                         if kind == 'type_text':
                             receipt = self.insert_focused_text(a['text'])
-                            if receipt is None and any(ord(c) > 126 for c in a['text']):
-                                raise ValueError('Unicode typing needs an observed editable field; use set_text. No keys were sent.')
                         if receipt is None:
+                            used_portal = True
                             self.portal.perform(a, session_id)
                     except Exception:
-                        # Session closure releases all held input, even if a release call failed.
-                        self.portal.close()
+                        # Only a portal input failure needs forced release/session closure.
+                        if used_portal and self.portal:
+                            self.portal.close()
                         raise
-                    results.append(receipt or {'kind': kind, 'executed': True, 'verified': False, 'backend': 'portal input', 'evidence': 'inspect returned image'})
+                    results.append(receipt or {'kind': kind, 'executed': True, 'verified': False,
+                                               'backend': 'portal keyboard after semantic focus' if kind == 'type_text' else 'portal input',
+                                               'evidence': 'inspect returned observation'})
                 pump(.05)
             except Exception as exc:
                 failure = short(exc, 400)
@@ -587,8 +613,9 @@ class Portal:
                 output.append(special[key.upper()])
             elif key.upper().startswith('F') and key[1:].isdigit() and 1 <= int(key[1:]) <= 12:
                 output.append(0xffbd + int(key[1:]))
-            elif len(key) == 1 and key.isprintable() and ord(key) <= 126:
-                output.append(ord(key))
+            elif len(key) == 1 and key.isprintable():
+                codepoint = ord(key)
+                output.append(codepoint if codepoint <= 126 else 0x01000000 | codepoint)
             else:
                 raise ValueError('Unsupported key name')
         if len(set(output)) != len(output):

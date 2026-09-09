@@ -56,6 +56,10 @@ class DesktopTests(unittest.TestCase):
         p.start(); self.addCleanup(p.stop)
         p = patch('desktop_worker.Atspi.Text.get_character_count', side_effect=lambda node: node.get_character_count())
         p.start(); self.addCleanup(p.stop)
+        p = patch('desktop_worker.Atspi.Text.get_n_selections', return_value=0)
+        p.start(); self.addCleanup(p.stop)
+        p = patch('desktop_worker.Atspi.Text.get_caret_offset', side_effect=lambda node: len(node.text))
+        p.start(); self.addCleanup(p.stop)
         self.d = FakeDesktop(Mock())
         self.node = Node()
         self.window = Node(role='window')
@@ -140,10 +144,22 @@ class DesktopTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             p.require('b')
 
+    @patch('desktop_worker.pump')
+    def test_type_text_falls_back_to_portal_for_invalid_semantic_caret_without_screenshot(self, _):
+        self.node.focused = True
+        self.d.entries['e1'] = (self.node, self.d.signature(self.d.describe(self.node)), self.window, 'test')
+        with patch('desktop_worker.Atspi.Text.get_caret_offset', return_value=-1):
+            result = self.d.act('now', [{'kind': 'type_text', 'text': 'Olá €'}],
+                                wait_ms=0, session_id='session')
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['results'][0]['backend'], 'portal keyboard after semantic focus')
+        self.d.portal.require.assert_called_with('session')
+        self.d.portal.perform.assert_called_once()
+
     def test_keys_unicode_and_modifiers(self):
         self.assertEqual(Portal.keysyms(['CTRL', 's']), [0xffe3, 115])
-        with self.assertRaises(ValueError):
-            Portal.keysyms(['€'])
+        self.assertEqual(Portal.keysyms(['€']), [0x01000000 | ord('€')])
+        self.assertEqual(Portal.keysyms(['ã']), [0x01000000 | ord('ã')])
         self.d.validate_actions([{'kind': 'type_text', 'text': 'Olá €'}])
 
 

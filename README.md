@@ -14,7 +14,7 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.6.2
+## Local Development Bridge 0.6.3
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
@@ -26,6 +26,12 @@ This revision keeps the important destructive boundaries but removes two practic
 Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
 
 The version immediately before this change is tagged `backup/pre-relaxed-security-20260909T004258Z` at commit `d4d9679`.
+
+## 0.6.3 rich web editor fallback
+
+Firefox can expose rich `contenteditable` editors with a valid semantic focus but an invalid AT-SPI caret, or accept `EditableText.set_text_contents` without changing the DOM-backed editor. `type_text` now inspects caret/selection state before mutation. When AT-SPI insertion is reliable it keeps verified semantic insertion; when the unique focused editor has an unreliable caret it does not mutate through AT-SPI and instead uses the already-authorized RemoteDesktop keyboard path. Because the target is already identified and focused semantically, this fallback needs no screenshot and no pointer coordinates. The GNOME portal session is still mandatory for injected key events.
+
+Portal `type_text` now emits standard Unicode X11 keysyms, so accented PT-PT text and other printable Unicode characters are not restricted to ASCII. Visual pointer actions retain the existing screenshot/session requirement. No tool names or schemas changed.
 
 ## 0.6.2 desktop usability
 

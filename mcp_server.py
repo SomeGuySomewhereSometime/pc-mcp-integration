@@ -394,9 +394,11 @@ def desktop_act(snapshot_id: str, actions: list[dict[str, Any]], wait_ms: int = 
     move/click: x,y; click optionally button=left|middle|right,count=1|2.
     drag: x,y,to_x,to_y; optionally duration_ms=100..1500,button.
     scroll: dx,dy (-1000..1000). key: keys e.g. ["CTRL","s"]. type_text: text.
-    type_text uses an observed focused editable field for Unicode insertion and readback;
-    otherwise keyboard events support ASCII only. Use set_text for other Unicode fields.
-    Raw input requires session_id and a screenshot from this session in the referenced snapshot.
+    type_text first uses an observed focused editable field with AT-SPI readback. If that
+    editor exposes an unreliable caret (common in rich web editors), it may fall back to
+    Unicode portal keyboard input using the same semantic focus: session_id is required,
+    but no screenshot or pointer coordinates are needed. Other raw input requires a matching
+    session_id and screenshot from this session in the referenced snapshot.
     Coordinates are 0..1 relative to that monitor image, not global desktop pixels.
     Target windows must be active (except focus). The snapshot is consumed on any action attempt.
     Batch only independent, predictable actions: changed later targets stop the batch.

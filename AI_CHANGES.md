@@ -344,3 +344,30 @@ Ready for deployment to the active Bridge; no MCP tool/schema change, so no cata
 
 ### Observações
 Live verification of the modified worker requires deployment/restart because the active Bridge marks its own installation read-only.
+
+## 2026-09-09 02:13 WEST — ChatGPT
+
+### Tarefa
+Add semantic-focus keyboard fallback for rich Firefox web editors
+
+### Ficheiros alterados
+- `desktop_worker.py`
+- `test_desktop.py`
+- `mcp_server.py`
+- `bridge.py`
+- `README.md`
+
+### Alterações
+`type_text` now inspects the unique focused AT-SPI editor before mutation. Reliable caret/selection state keeps verified AT-SPI insertion. An unreliable caret, as exposed by the ChatGPT rich composer in Firefox, triggers an authorized GNOME RemoteDesktop keyboard fallback using the already-established semantic focus, with no screenshot or pointer coordinates. Added Unicode X11 keysyms for printable non-ASCII characters. Pointer input retains the existing screenshot requirement. Version bumped to 0.6.3.
+
+### Motivo
+Live v0.6.2 testing proved semantic navigation and composer discovery work, but Firefox reports an invalid caret for the ChatGPT contenteditable editor and `set_text_contents` is a no-op despite returning success.
+
+### Testes
+- `/usr/bin/python3 -B -m unittest -v test_desktop`: 12/12 passed
+- Active Bridge venv targeted suite: 29 passed, 4 expected integration skips
+- Full discovery: 38 tests passed with 8 expected integration skips
+- `git diff --check`: clean
+
+### Estado
+Ready for deployment as v0.6.3. No MCP tool names or schemas changed.
