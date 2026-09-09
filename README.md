@@ -14,7 +14,7 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.6.0
+## Local Development Bridge 0.6.2
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
@@ -26,6 +26,12 @@ This revision keeps the important destructive boundaries but removes two practic
 Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
 
 The version immediately before this change is tagged `backup/pre-relaxed-security-20260909T004258Z` at commit `d4d9679`.
+
+## 0.6.2 desktop usability
+
+Firefox/AT-SPI was verified to expose a rich semantic tree, including browser chrome, tabs, links, buttons and ChatGPT navigation. The remaining friction was in the Bridge traversal and input policy rather than an inherent Firefox limitation. Observation now traverses through up to two non-showing intermediary wrappers while still returning only showing/useful elements, which helps modern web apps whose visible controls sit below generic accessibility containers.
+
+`type_text` no longer requires a GNOME RemoteDesktop session or screenshot when exactly one observed editable element already has accessibility focus in the active window. In that case insertion uses AT-SPI `EditableText` and keeps readback verification. Raw keyboard fallback still requires the authorized portal session and screenshot, and ambiguous multiple focused editable fields are refused. No MCP tool names or schemas changed in this revision, so a ChatGPT catalog refresh is not required.
 
 ## Desktop observation and control
 

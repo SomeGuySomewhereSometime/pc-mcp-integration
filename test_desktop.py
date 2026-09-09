@@ -11,10 +11,11 @@ except ModuleNotFoundError as exc:
 
 
 class Node:
-    def __init__(self, text='initial', role='entry', active=True):
+    def __init__(self, text='initial', role='entry', active=True, focused=False):
         self.text = text
         self.role = role
         self.active = active
+        self.focused = focused
         self.writes = []
 
     def get_editable_text_iface(self):
@@ -41,7 +42,8 @@ class Node:
 class FakeDesktop(Desktop):
     def describe(self, node):
         return {'text': node.text, 'role': node.role, 'interfaces': ['EditableText', 'Text'],
-                'states': ['showing', 'sensitive'] + (['active'] if node.active else [])}
+                'states': ['showing', 'sensitive'] + (['active'] if node.active else [])
+                          + (['focused'] if node.focused else [])}
 
     def observe(self, **kwargs):
         self.snapshot = {'snapshot_id': 'next', 'captured_at': time.time(), 'elements': []}
@@ -99,6 +101,19 @@ class DesktopTests(unittest.TestCase):
     def test_raw_input_requires_matching_observed_monitor(self):
         with self.assertRaisesRegex(ValueError, 'screenshot observation'):
             self.d.act('now', [{'kind': 'click', 'x': .5, 'y': .5}], session_id='session')
+        self.d.portal.perform.assert_not_called()
+
+    @patch('desktop_worker.pump')
+    def test_type_text_on_unique_focused_editable_does_not_require_portal(self, _):
+        self.node.focused = True
+        self.d.entries['e1'] = (self.node, self.d.signature(self.d.describe(self.node)), self.window, 'test')
+        receipt = {'kind': 'type_text', 'executed': True, 'verified': True,
+                   'backend': 'AT-SPI EditableText', 'evidence': 'readback'}
+        with patch.object(self.d, 'insert_focused_text', return_value=receipt):
+            result = self.d.act('now', [{'kind': 'type_text', 'text': 'Olá'}], wait_ms=0)
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['results'][0]['verified'])
+        self.d.portal.require.assert_not_called()
         self.d.portal.perform.assert_not_called()
 
     def test_expired_observation_rejected(self):

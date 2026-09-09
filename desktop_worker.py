@@ -125,16 +125,17 @@ class Desktop:
                     entries[wid] = (win, self.signature(detail), win, name)
                     # Default scan only active windows; named queries may inspect inactive windows.
                     if application or window or 'active' in detail['states']:
-                        queue.append((win, wid, 0, name, win))
+                        queue.append((win, wid, 0, 0, name, win))
             except Exception:
                 errors += 1
         visited = 0
         while queue and len(elements) < max_elements and time.monotonic() < deadline and visited < 2500:
-            node, parent, depth, name, win = queue.popleft()
+            node, parent, depth, hidden_streak, name, win = queue.popleft()
             visited += 1
             try:
                 data = self.describe(node)
                 showing = 'showing' in data['states']
+                next_hidden_streak = 0 if showing else hidden_streak + 1
                 useful = data['name'] or data.get('text') or data.get('actions') or 'editable' in data['states']
                 next_parent = parent
                 if depth and showing and useful:
@@ -142,11 +143,11 @@ class Desktop:
                     elements.append({'id': eid, 'parent': parent, 'application': name, **data})
                     entries[eid] = (node, self.signature(data), win, name)
                     next_parent = eid
-                if depth < 25 and (showing or depth == 0):
+                if depth < 25 and (showing or depth == 0 or next_hidden_streak <= 2):
                     for i in range(min(node.get_child_count(), 500)):
                         child = node.get_child_at_index(i)
                         if child:
-                            queue.append((child, next_parent, depth + 1, name, win))
+                            queue.append((child, next_parent, depth + 1, next_hidden_streak, name, win))
             except Exception:
                 errors += 1
         result = {'snapshot_id': snapshot_id, 'captured_at': time.time(), 'windows': windows, 'elements': elements,
@@ -216,22 +217,31 @@ class Desktop:
             if 'keys' in a:
                 Portal.keysyms(a['keys'])
 
-    def insert_focused_text(self, inserted):
-        """Use observed, focused editable elements for layout-independent Unicode insertion.
-
-        No clipboard access. None means unsupported before any mutation; never fall back
-        to key events after an insertion was attempted.
-        """
+    def focused_editable_nodes(self):
+        """Return unique observed focused editable nodes in active windows."""
         candidates = []
+        seen = set()
         for node, _, win, _ in self.entries.values():
             try:
                 data = self.describe(node)
                 if ('focused' in data['states'] and 'EditableText' in data['interfaces']
                         and node.get_role() != Atspi.Role.PASSWORD_TEXT
                         and 'active' in self.describe(win)['states']):
-                    candidates.append(node)
+                    marker = id(node)
+                    if marker not in seen:
+                        seen.add(marker)
+                        candidates.append(node)
             except Exception:
                 continue
+        return candidates
+
+    def insert_focused_text(self, inserted):
+        """Use observed, focused editable elements for layout-independent Unicode insertion.
+
+        No clipboard access. None means unsupported before any mutation; never fall back
+        to key events after an insertion was attempted.
+        """
+        candidates = self.focused_editable_nodes()
         if len(candidates) != 1:
             return None
         node = candidates[0]
@@ -284,6 +294,14 @@ class Desktop:
                 if a['kind'] in ('focus', 'scroll_into_view') and 'Component' not in data['interfaces']:
                     raise ValueError('Element has no component interface')
             else:
+                if a['kind'] == 'type_text':
+                    focused = self.focused_editable_nodes()
+                    if len(focused) == 1:
+                        # Semantic AT-SPI insertion is verified by readback and does
+                        # not need a RemoteDesktop session or screenshot.
+                        continue
+                    if len(focused) > 1:
+                        raise ValueError('Multiple focused editable fields; use set_text on an explicit element')
                 if not self.portal:
                     raise ValueError('RemoteDesktop portal unavailable')
                 self.portal.require(session_id)

@@ -316,3 +316,31 @@ Staged fix ready for deployment as 0.6.1.
 
 ### Observações
 Real DNS resolution must be verified after copying the fix into the active Bridge and restarting it.
+
+## 2026-09-09 02:05 WEST — ChatGPT
+
+### Tarefa
+Reduce unnecessary desktop-control friction for Firefox and modern web apps
+
+### Ficheiros alterados
+- `desktop_worker.py`
+- `test_desktop.py`
+- `bridge.py`
+- `README.md`
+
+### Alterações
+Verified Firefox exposes a rich AT-SPI tree and changed the Bridge rather than Firefox: desktop observation now traverses through up to two non-showing intermediary wrappers while still emitting only showing/useful nodes, and type_text can use a unique focused AT-SPI EditableText field without requiring a GNOME RemoteDesktop session or screenshot. Raw input still requires the authorized portal path. Bumped Bridge version to 0.6.2 and documented the behavior.
+
+### Motivo
+The remaining failures were Bridge traversal/input-policy friction, not an AppArmor denial or fundamental Firefox limitation.
+
+### Testes
+- /usr/bin/python3 -B -m unittest -v test_desktop: 11/11 passed
+- Active Bridge venv: test_bridge test_security test_desktop_mcp: 29 passed, 4 expected integration skips
+- git diff --check: clean
+
+### Estado
+Ready for deployment to the active Bridge; no MCP tool/schema change, so no catalog refresh required.
+
+### Observações
+Live verification of the modified worker requires deployment/restart because the active Bridge marks its own installation read-only.
