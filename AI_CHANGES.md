@@ -416,3 +416,22 @@ Improve Unicode typing in Firefox rich web editors without clipboard or pointer 
 
 ### Estado
 Ready for deployment and live Firefox/ChatGPT composer verification. No MCP tool names or schemas changed.
+
+## 2026-09-09 — ChatGPT — v0.6.6 empty rich-editor Unicode insertion
+
+### Tarefa
+Handle the real Firefox/ChatGPT case where both the focused wrapper and editable descendant expose an invalid caret while the empty editor is represented only by whitespace.
+
+### Alterações
+- If exactly one visible editable descendant is whitespace-only and has no valid selection/caret, treat it as an empty rich editor and replace only that whitespace via AT-SPI.
+- Preserve the portal fallback for ambiguous descendants or any descendant containing meaningful draft text.
+- Added regression coverage for invalid-caret whitespace descendants.
+- Version bumped to 0.6.6.
+
+### Testes
+- `/usr/bin/python3 -B -m unittest -v test_desktop`: 16/16 passed.
+- Active Bridge venv: `test_bridge test_security test_desktop_mcp`: 29 passed, 4 expected integration skips.
+- `git diff --check`: clean.
+
+### Estado
+Ready for live Firefox/ChatGPT Unicode verification. No MCP tool/schema change.

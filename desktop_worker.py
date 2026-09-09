@@ -266,6 +266,14 @@ class Desktop:
                     selection = Atspi.Text.get_selection(text, 0)
                     start, end = selection.start_offset, selection.end_offset
                 if not 0 <= start <= end <= count:
+                    # Rich contenteditables often expose an invalid caret while empty,
+                    # representing the empty editor as only whitespace/NBSP/newline.
+                    # Replacing that whitespace is deterministic and cannot overwrite
+                    # meaningful draft text.
+                    if selections == 0 and not original.strip():
+                        return {'node': node, 'semantic': True, 'text': text, 'count': count,
+                                'original': original, 'start': 0, 'end': count,
+                                'replace_empty_whitespace': True}
                     return None
                 return {'node': node, 'semantic': True, 'text': text, 'count': count,
                         'original': original, 'start': start, 'end': end}
@@ -304,7 +312,11 @@ class Desktop:
             except Exception:
                 continue
         if len(plans) == 1:
-            plans[0]['backend_detail'] = 'focused editable descendant'
+            plans[0]['backend_detail'] = (
+                'focused empty editable descendant'
+                if plans[0].get('replace_empty_whitespace')
+                else 'focused editable descendant'
+            )
             return plans[0]
         return {'node': root, 'semantic': False}
 

@@ -141,6 +141,19 @@ class DesktopTests(unittest.TestCase):
         self.assertIs(plan['node'], child)
         self.assertEqual(plan['backend_detail'], 'focused editable descendant')
 
+    def test_invalid_caret_whitespace_descendant_gets_semantic_replace_plan(self):
+        child = Node(text='   ', focused=False, caret=-1)
+        self.node.focused = True
+        self.node.caret = -1
+        self.node.children = [child]
+        self.d.entries['e1'] = (self.node, self.d.signature(self.d.describe(self.node)), self.window, 'test')
+        plan = self.d.focused_text_plan()
+        self.assertTrue(plan['semantic'])
+        self.assertIs(plan['node'], child)
+        self.assertEqual((plan['start'], plan['end']), (0, len(child.text)))
+        self.assertTrue(plan['replace_empty_whitespace'])
+        self.assertEqual(plan['backend_detail'], 'focused empty editable descendant')
+
     @patch('desktop_worker.pump')
     def test_semantic_insert_uses_character_length_for_unicode(self, _):
         self.node.focused = True
