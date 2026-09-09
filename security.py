@@ -79,6 +79,12 @@ def sandbox_argv(workspace: Path, cwd: Path, config: dict, argv: list[str], *, r
     args += ["--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
              "--tmpfs", "/tmp", "--tmpfs", "/run", "--tmpfs", "/home",
              "--dir", str(workspace), "--ro-bind" if read_only else "--bind", str(workspace), str(workspace)]
+    if sandbox_network_enabled(config):
+        # Ubuntu commonly points /etc/resolv.conf into /run/systemd/resolve.
+        # Re-expose only resolver metadata needed for DNS, not the rest of /run.
+        resolver = Path("/run/systemd/resolve")
+        if resolver.is_dir():
+            args += ["--dir", "/run/systemd", "--ro-bind", str(resolver), str(resolver)]
     # Optional tools outside a smaller workspace remain readable, never writable.
     node = Path("/home/user/.hermes/node")
     if node.exists() and not node.is_relative_to(workspace):

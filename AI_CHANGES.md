@@ -292,3 +292,27 @@ Staged in a second working copy of the same pc-mcp-integration repository; activ
 
 ### Observações
 Pre-change commit d4d9679 is tagged backup/pre-relaxed-security-20260909T004258Z. Network retains Bubblewrap mount/PID/IPC/user isolation, capability dropping, private HOME/runtime mounts and protected paths; only the network namespace is shared when sandbox.network=true.
+
+## 2026-09-09 01:56 WEST — ChatGPT
+
+### Tarefa
+Fix DNS inside the relaxed Bubblewrap network mode
+
+### Ficheiros alterados
+- `security.py`
+
+### Alterações
+When sandbox.network is enabled, re-expose only /run/systemd/resolve read-only so Ubuntu's /etc/resolv.conf symlink continues to resolve DNS while the rest of /run remains isolated.
+
+### Motivo
+The first 0.6.0 deployment correctly retained the host network namespace but DNS lookups failed because /etc/resolv.conf points into the otherwise private /run mount.
+
+### Testes
+- Targeted sandbox network policy unit test passed
+- Full Python suite: 38 tests passed, 8 expected integration skips
+
+### Estado
+Staged fix ready for deployment as 0.6.1.
+
+### Observações
+Real DNS resolution must be verified after copying the fix into the active Bridge and restarting it.
