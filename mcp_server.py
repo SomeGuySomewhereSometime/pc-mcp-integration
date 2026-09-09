@@ -111,8 +111,8 @@ def run_command(
     Run a shell command inside the Bubblewrap sandbox.
 
     The shell can access the configured workspace, except protected paths.
-    Host IPC and network access are isolated. Control files are read-only.
-    Common destructive command patterns are refused; this is not an exhaustive
+    Host IPC stays isolated; network access follows sandbox.network in the local config.
+    Control files are read-only. Common destructive command patterns are refused; this is not an exhaustive
     command allowlist. Use dedicated tools for desktop applications.
     """
     return call_bridge(
@@ -168,7 +168,8 @@ def get_session_context(cwd: str = ".") -> dict:
             "global_instructions": effective_instructions(), "project_rules": rules,
             "filesystem_policy": bridge.BRIDGE_CONFIG.get("filesystem", {}),
             "applications": bridge.BRIDGE_CONFIG.get("applications", {}),
-            "shell_network": False, "host_ipc_isolated": True}
+            "shell_network": bridge.sandbox_network_enabled(bridge.BRIDGE_CONFIG),
+            "host_ipc_isolated": True, "host_process_diagnostics": True}
 
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False))
@@ -191,6 +192,24 @@ def process_list(query: str = "", limit: int = 200, include_args: bool = False) 
     return call_bridge(
         bridge.process_list,
         bridge.ProcessListRequest(query=query, limit=limit, include_args=include_args),
+    )
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False))
+def process_info(pid: int) -> dict:
+    """Inspect one current-user host process, including executable, cwd, AppArmor label and namespaces."""
+    return call_bridge(
+        bridge.process_info,
+        bridge.ProcessInfoRequest(pid=pid),
+    )
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False))
+def journal_query(query: str = "", since_minutes: int = 60, limit: int = 200, kernel_only: bool = False) -> dict:
+    """Read a bounded slice of the host journal, optionally filtering text or limiting to kernel events."""
+    return call_bridge(
+        bridge.journal_query,
+        bridge.JournalQueryRequest(query=query, since_minutes=since_minutes, limit=limit, kernel_only=kernel_only),
     )
 
 

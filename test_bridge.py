@@ -57,6 +57,26 @@ class BridgeTests(unittest.TestCase):
         for item in result["processes"]:
             self.assertIn("args", item)
 
+    def test_process_info_reads_current_user_process_without_environ(self):
+        result = bridge.process_info(bridge.ProcessInfoRequest(pid=os.getpid()))
+        self.assertEqual(result["pid"], os.getpid())
+        self.assertEqual(result["owner_uid"], os.getuid())
+        self.assertTrue(result["executable"])
+        self.assertIn("pid", result["namespaces"])
+        self.assertNotIn("environ", result)
+
+    def test_journal_query_is_bounded_and_filters_text(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout="first line\nAppArmor denied demo\nlast line\n", stderr=""
+        )
+        with patch.object(bridge.subprocess, "run", return_value=fake) as run:
+            result = bridge.journal_query(
+                bridge.JournalQueryRequest(query="apparmor", since_minutes=5, limit=10, kernel_only=True)
+            )
+        self.assertEqual(result["lines"], ["AppArmor denied demo"])
+        self.assertIn("--dmesg", run.call_args.args[0])
+
     def test_process_kill_owned_allowlisted_child(self):
         child = subprocess.Popen(["/usr/bin/sleep", "30"])
         policy = {

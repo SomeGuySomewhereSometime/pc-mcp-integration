@@ -14,10 +14,18 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.5.0
+## Local Development Bridge 0.6.0
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
+
+### 0.6.0: less restrictive where it helps development
+
+This revision keeps the important destructive boundaries but removes two practical bottlenecks. `sandbox.network` can retain the host network namespace for normal development commands while Bubblewrap still isolates host IPC, PID visibility, private runtime mounts, home credentials and capabilities. The operator configuration in this repository enables network access. Git author identity is still the only global Git configuration forwarded into the shell; credential helpers and login profiles remain hidden.
+
+Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
+
+The version immediately before this change is tagged `backup/pre-relaxed-security-20260909T004258Z` at commit `d4d9679`.
 
 ## Desktop observation and control
 
@@ -75,7 +83,7 @@ claim to implement libei. The backend retains the compositor's permission sessio
 without granting access to `/dev/uinput` or changing device permissions. Frames come
 through the authorized PipeWire stream (at most 5 fps), not repeated screenshot dialogs.
 Sessions close on revocation, process exit, explicit stop or 15 minutes of inactivity.
-Shell sandboxing remains unchanged. Desktop tools control the signed-in desktop;
+Shell commands remain Bubblewrap-sandboxed; network follows `sandbox.network`. Desktop tools control the signed-in desktop;
 filesystem sandbox rules are not a containment boundary for graphical applications.
 
 Blender and Unity retain their dedicated MCPs as the source of truth for editing
@@ -118,9 +126,9 @@ Refresh the plugin's tools in ChatGPT after changing the server's tool catalog.
   workspace stays available for normal project editing.
 - File reads/writes validate paths. Recursive search, patches, Git and shell run
   through Bubblewrap; host `/run`, `/tmp`, `/proc` and home mounts are isolated.
-- The shell has no network and uses no login/profile scripts. Its HOME is private
-  `/tmp`; use explicit project paths. Project dependencies already installed remain
-  available. Do not use Blender/Unity Python/C# to bypass a denied operation.
+- The shell uses no login/profile scripts and its HOME is private `/tmp`. Network is
+  controlled by `sandbox.network`; it is enabled here for normal development traffic.
+  Host IPC and credentials remain isolated. Do not use Blender/Unity Python/C# to bypass a denied operation.
 - Global Git `user.name` and `user.email` are copied into an ephemeral, read-only
   config inside the sandbox. Repository-local identity still takes precedence.
   Global credential helpers, hooks and other settings are not forwarded.
@@ -204,12 +212,13 @@ The Git regression performs a disposable commit and checks local identity preced
 
 ## ChatGPT catalog after this update
 
-The running servers advertise Bridge 20 tools, Blender 30 tools and Unity 114
+The updated Bridge advertises 26 tools; Blender advertises 30 tools and Unity 114
 currently enabled tools. A saved ChatGPT connection may retain older metadata.
 Open each of the three existing connections in ChatGPT Plugins, select Refresh,
 check the tools, and start a new conversation with the connections enabled.
-The new Bridge tools are `get_session_context` and `integration_status`; Blender
-adds `get_context` and `get_scene_objects`. The five newly enabled Unity state
+Current Bridge additions include `get_session_context`, `integration_status`,
+`process_info`, `journal_query` and the four `desktop_*` tools. Blender adds
+`get_context` and `get_scene_objects`. The five newly enabled Unity state
 and screenshot tools must also appear in the refreshed Unity connection.
 The existing tunnel IDs, health ports and credentials still work; no replacement
 API key or tunnel is required. See the official refresh workflow:
@@ -245,3 +254,7 @@ requires GNOME consent and remains pending; the last request timed out. Refresh
 the ChatGPT connection and validate a Sol action before treating the full ChatGPT
 workflow as proven. Firefox was running but absent by name from the current AT-SPI
 application inventory; no browser settings were changed.
+
+## 0.6.0 staged validation status
+
+The normal Python suite passed 38 tests with 8 expected integration skips. Targeted Bridge/security tests passed 29 tests with 4 expected skips. Host Bubblewrap integration tests could not be rerun from inside the already-sandboxed active Bridge because nested unprivileged user namespaces are unavailable there. The generated Bubblewrap argv is unit-tested to retain `--unshare-all`, capability dropping and private mounts while adding `--share-net` only when configured. Before deployment, rerun host integration outside an existing Bridge command sandbox, restart only the Bridge service and refresh the ChatGPT tool catalog.

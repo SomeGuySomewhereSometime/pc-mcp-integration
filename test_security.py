@@ -78,6 +78,19 @@ class SecurityTests(unittest.TestCase):
         self.assertNotIn("AWS_SECRET_ACCESS_KEY", env)
         self.assertEqual(env["DISPLAY"], ":0")
 
+    def test_sandbox_network_is_opt_in_and_does_not_remove_other_isolation(self):
+        base = {"filesystem": {"denied_paths": [str(self.root / "private")],
+                               "read_only_paths": [str(self.root / "control")]}}
+        isolated = security.sandbox_argv(self.root, self.root, base, ["/usr/bin/true"])
+        self.assertIn("--unshare-all", isolated)
+        self.assertNotIn("--share-net", isolated)
+        relaxed = dict(base, sandbox={"network": True})
+        networked = security.sandbox_argv(self.root, self.root, relaxed, ["/usr/bin/true"])
+        self.assertIn("--unshare-all", networked)
+        self.assertIn("--share-net", networked)
+        self.assertIn("--cap-drop", networked)
+        self.assertIn("--tmpfs", networked)
+
     def test_fixed_launcher_arguments_cannot_be_extended(self):
         policy = {"applications": {"demo": {"executable": "/usr/bin/true", "fixed_args": ["approved"], "allow_args": False}}}
         with patch.object(bridge, "BRIDGE_CONFIG", policy), patch.object(bridge, "launch_application") as launch:

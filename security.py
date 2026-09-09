@@ -59,15 +59,26 @@ def minimal_environment(*, desktop: bool = False) -> dict[str, str]:
     return env
 
 
+def sandbox_network_enabled(config: dict) -> bool:
+    """Return whether development commands may use the host network stack."""
+    section = config.get("sandbox", {})
+    return isinstance(section, dict) and section.get("network") is True
+
+
 def sandbox_argv(workspace: Path, cwd: Path, config: dict, argv: list[str], *, read_only: bool = False,
                  git_config_fd: int | None = None) -> list[str]:
-    """Hide host IPC and credentials; never run shell startup files."""
+    """Hide host IPC and credentials; optionally retain host networking."""
     if not Path("/usr/bin/bwrap").exists():
         raise HTTPException(500, "bubblewrap is not installed")
     args = ["/usr/bin/bwrap", "--die-with-parent", "--new-session", "--unshare-all",
-            "--cap-drop", "ALL", "--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
-            "--tmpfs", "/tmp", "--tmpfs", "/run", "--tmpfs", "/home",
-            "--dir", str(workspace), "--ro-bind" if read_only else "--bind", str(workspace), str(workspace)]
+            "--cap-drop", "ALL"]
+    if sandbox_network_enabled(config):
+        # Keep mount/PID/IPC/user isolation but allow normal development traffic.
+        # Credentials remain withheld because HOME and Git config stay private.
+        args += ["--share-net"]
+    args += ["--ro-bind", "/", "/", "--proc", "/proc", "--dev", "/dev",
+             "--tmpfs", "/tmp", "--tmpfs", "/run", "--tmpfs", "/home",
+             "--dir", str(workspace), "--ro-bind" if read_only else "--bind", str(workspace), str(workspace)]
     # Optional tools outside a smaller workspace remain readable, never writable.
     node = Path("/home/user/.hermes/node")
     if node.exists() and not node.is_relative_to(workspace):

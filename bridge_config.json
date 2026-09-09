@@ -101,5 +101,8 @@
   },
   "desktop": {
     "enabled": true
+  },
+  "sandbox": {
+    "network": true
   }
 }

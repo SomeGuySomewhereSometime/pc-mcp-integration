@@ -24,7 +24,7 @@ async def main():
                 await asyncio.wait_for(session.initialize(), 10)
                 tools = await asyncio.wait_for(session.list_tools(), 10)
                 names = [t.name for t in tools.tools]
-                assert len(names) == 24, names
+                assert len(names) == 26, names
                 print('MCP_CATALOG', len(names), [n for n in names if n.startswith('desktop_')], flush=True)
                 async def call(name, arguments):
                     r = await asyncio.wait_for(session.call_tool(name, arguments), 20)

@@ -15,7 +15,8 @@ from urllib.parse import unquote, urlparse
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from security import checked_path, minimal_environment, run_sandbox, validate_filesystem_policy
+from security import (checked_path, minimal_environment, run_sandbox, sandbox_network_enabled,
+                      validate_filesystem_policy)
 from applications import Application, launch_application
 
 
@@ -59,7 +60,7 @@ BRIDGE_CONFIG = load_bridge_config()
 
 app = FastAPI(
     title="ChatGPT Local Bridge",
-    version="0.5.0",
+    version="0.6.0",
 )
 
 
@@ -123,6 +124,17 @@ class ProcessListRequest(BaseModel):
 class ProcessKillRequest(BaseModel):
     pid: int
     signal: str = "TERM"
+
+
+class ProcessInfoRequest(BaseModel):
+    pid: int
+
+
+class JournalQueryRequest(BaseModel):
+    query: str = ""
+    since_minutes: int = 60
+    limit: int = 200
+    kernel_only: bool = False
 
 
 class ScreenCaptureRequest(BaseModel):
@@ -196,7 +208,7 @@ def command_is_blocked(command: str) -> bool:
 def health():
     return {
         "ok": True,
-        "version": "0.4.1",
+        "version": "0.6.0",
         "workspace": str(WORKSPACE),
         "workspace_exists": WORKSPACE.exists(),
         "command_workspace": str(COMMAND_WORKSPACE),
@@ -416,7 +428,7 @@ def run_command(req: CommandRequest):
         "stderr": stderr,
         "cwd": str(cwd.relative_to(COMMAND_WORKSPACE)) or ".",
         "sandboxed": True,
-        "network": False,
+        "network": sandbox_network_enabled(BRIDGE_CONFIG),
     }
 
 
@@ -774,6 +786,95 @@ def process_list(req: ProcessListRequest):
         "count": len(processes),
         "limit": limit,
         "include_args": req.include_args,
+    }
+
+
+def _read_proc_text(proc: Path, name: str, *, limit: int = 64_000) -> str:
+    try:
+        data = (proc / name).read_bytes()[:limit]
+    except (FileNotFoundError, PermissionError, OSError):
+        return ""
+    return data.decode(errors="replace").rstrip("\n")
+
+
+@app.post("/process_info")
+def process_info(req: ProcessInfoRequest):
+    if req.pid <= 0:
+        raise HTTPException(400, "PID must be positive")
+    proc = Path(f"/proc/{req.pid}")
+    if not proc.exists():
+        raise HTTPException(404, f"Process {req.pid} does not exist")
+    try:
+        owner_uid = proc.stat().st_uid
+    except OSError as exc:
+        raise HTTPException(400, f"Cannot inspect process {req.pid}: {exc}") from exc
+    if owner_uid != os.getuid():
+        raise HTTPException(403, "DENIED: process is owned by another user")
+
+    status = {}
+    for line in _read_proc_text(proc, "status").splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            if key in {"Name", "State", "Pid", "PPid", "Threads", "Uid", "Gid"}:
+                status[key.lower()] = value.strip()
+
+    executable = _process_executable(req.pid)
+    try:
+        cwd = str((proc / "cwd").resolve(strict=True))
+    except (FileNotFoundError, PermissionError, OSError):
+        cwd = ""
+    cmdline = _read_proc_text(proc, "cmdline").replace("\x00", " ").strip()
+    apparmor_label = _read_proc_text(proc, "attr/current", limit=4096)
+    cgroup = _read_proc_text(proc, "cgroup", limit=16_000)
+    namespaces = {}
+    for name in ("pid", "mnt", "net", "ipc", "user"):
+        try:
+            namespaces[name] = os.readlink(proc / "ns" / name)
+        except OSError:
+            pass
+    return {
+        "pid": req.pid,
+        "owner_uid": owner_uid,
+        "status": status,
+        "executable": str(executable) if executable else "",
+        "cwd": cwd,
+        "cmdline": cmdline,
+        "apparmor_label": apparmor_label,
+        "cgroup": cgroup,
+        "namespaces": namespaces,
+    }
+
+
+@app.post("/journal_query")
+def journal_query(req: JournalQueryRequest):
+    query = req.query.strip()
+    if len(query) > 200:
+        raise HTTPException(400, "Query is too long")
+    since_minutes = max(1, min(req.since_minutes, 1440))
+    limit = max(1, min(req.limit, 500))
+    argv = [
+        "/usr/bin/journalctl", "--no-pager", "--output=short-iso",
+        "--since", f"{since_minutes} minutes ago", "-n", "2000",
+    ]
+    if req.kernel_only:
+        argv.append("--dmesg")
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=20, env=minimal_environment())
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise HTTPException(500, f"journalctl failed: {exc}") from exc
+    if result.returncode != 0:
+        raise HTTPException(500, result.stderr.strip() or "journalctl failed")
+    lines = result.stdout.splitlines()
+    if query:
+        folded = query.casefold()
+        lines = [line for line in lines if folded in line.casefold()]
+    lines = lines[-limit:]
+    return {
+        "query": query,
+        "since_minutes": since_minutes,
+        "kernel_only": req.kernel_only,
+        "count": len(lines),
+        "lines": lines,
     }
 
 

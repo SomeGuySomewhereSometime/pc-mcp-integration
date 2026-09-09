@@ -257,3 +257,38 @@ funcionamento e as contas dos túneis não foram alteradas por este backup.
   its live repeat and the added scroll assertion await local GNOME consent (last
   permission request timed out). Do not call that final repeat passed. ChatGPT
   Refresh and a real Sol action using the new catalog are also pending.
+
+## 2026-09-09 01:51 WEST — ChatGPT
+
+### Tarefa
+Relax Local Dev Bridge restrictions that were blocking legitimate diagnostics and normal development work while preserving destructive filesystem boundaries.
+
+### Ficheiros alterados
+- `security.py`
+- `bridge.py`
+- `mcp_server.py`
+- `bridge_config.json`
+- `test_bridge.py`
+- `test_security.py`
+- `check_desktop_mcp.py`
+- `README.md`
+- `AI_CHANGES.md`
+
+### Alterações
+Added opt-in Bubblewrap host networking and enabled it in the operator config; added bounded host process diagnostics with AppArmor/cgroup/namespace information; added bounded journal/kernel querying; exposed both as read-only MCP tools; bumped Bridge to 0.6.0 and updated catalog/test expectations and documentation.
+
+### Motivo
+The command sandbox's isolated network and /proc view were preventing legitimate development and diagnosis, including identifying AppArmor/Snap interactions with Firefox. Dedicated host diagnostics solve the /proc problem without exposing the host PID namespace to arbitrary shell commands, while configurable networking restores common development workflows.
+
+### Testes
+- 29 targeted Bridge/security tests: OK, 4 expected integration skips
+- 38-test normal unittest suite: OK, 8 expected integration skips
+- MCP wire catalog probe: 26 tools; process_info, journal_query and all desktop tools present
+- Real journal_query(kernel_only=true, query=apparmor): returned bounded AppArmor kernel events
+- Host Bubblewrap integration suite attempted from inside the active Bridge sandbox; nested user namespaces were refused by the environment, so those host-only tests must be rerun outside an existing Bridge command sandbox
+
+### Estado
+Staged in a second working copy of the same pc-mcp-integration repository; active Bridge has not been overwritten.
+
+### Observações
+Pre-change commit d4d9679 is tagged backup/pre-relaxed-security-20260909T004258Z. Network retains Bubblewrap mount/PID/IPC/user isolation, capability dropping, private HOME/runtime mounts and protected paths; only the network namespace is shared when sandbox.network=true.
