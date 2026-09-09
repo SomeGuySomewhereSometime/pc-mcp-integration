@@ -396,3 +396,23 @@ The host journal showed `xdg-desktop-portal-gnome: Failed to associate portal wi
 
 ### Estado
 Ready for deployment as v0.6.4. No MCP tool/schema change; plugin refresh is not required.
+
+## 2026-09-09 — ChatGPT — v0.6.5 rich-editor semantic descendant input
+
+### Tarefa
+Improve Unicode typing in Firefox rich web editors without clipboard or pointer coordinates.
+
+### Alterações
+- When the uniquely focused AT-SPI editor wrapper has an invalid caret, search only its bounded descendant tree for exactly one visible editable Text/EditableText node with sane caret/selection state.
+- Use that descendant for verified semantic insertion; ambiguous or unavailable descendants retain the authorized portal-keyboard fallback.
+- Pass Unicode insertion length to AT-SPI as character count rather than UTF-8 byte count.
+- Added tests for descendant selection and multi-byte Unicode character length.
+- Version bumped to 0.6.5.
+
+### Testes
+- `/usr/bin/python3 -B -m unittest -v test_desktop`: 15/15 passed.
+- Active Bridge venv: `test_bridge test_security test_desktop_mcp`: 29 passed, 4 expected integration skips.
+- `git diff --check`: clean.
+
+### Estado
+Ready for deployment and live Firefox/ChatGPT composer verification. No MCP tool names or schemas changed.

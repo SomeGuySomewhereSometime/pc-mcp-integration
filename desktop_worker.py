@@ -238,32 +238,75 @@ class Desktop:
     def focused_text_plan(self):
         """Inspect the unique focused editor without mutating it.
 
-        semantic=False means AT-SPI focus is trustworthy but its text/caret model is not;
-        a consented portal keyboard fallback can then type without pointer coordinates.
+        Rich web editors may focus a wrapper while the actual editable text is a
+        descendant. Use that descendant only when exactly one has a sane text/caret
+        model; otherwise keep the consented portal keyboard fallback.
         """
         candidates = self.focused_editable_nodes()
         if len(candidates) != 1:
             return None
-        node = candidates[0]
-        try:
-            text = node.get_text_iface()
-            count = Atspi.Text.get_character_count(text)
-            if not 0 <= count <= 20000:
-                return {'node': node, 'semantic': False}
-            original = Atspi.Text.get_text(text, 0, count)
-            selections = Atspi.Text.get_n_selections(text)
-            if selections > 1:
-                return {'node': node, 'semantic': False}
-            start = end = Atspi.Text.get_caret_offset(text)
-            if selections:
-                selection = Atspi.Text.get_selection(text, 0)
-                start, end = selection.start_offset, selection.end_offset
-            if not 0 <= start <= end <= count:
-                return {'node': node, 'semantic': False}
-            return {'node': node, 'semantic': True, 'text': text, 'count': count,
-                    'original': original, 'start': start, 'end': end}
-        except Exception:
-            return {'node': node, 'semantic': False}
+        root = candidates[0]
+
+        def plan_for(node):
+            try:
+                data = self.describe(node)
+                if ('EditableText' not in data['interfaces'] or 'Text' not in data['interfaces']
+                        or node.get_role() == Atspi.Role.PASSWORD_TEXT):
+                    return None
+                text = node.get_text_iface()
+                count = Atspi.Text.get_character_count(text)
+                if not 0 <= count <= 20000:
+                    return None
+                original = Atspi.Text.get_text(text, 0, count)
+                selections = Atspi.Text.get_n_selections(text)
+                if selections > 1:
+                    return None
+                start = end = Atspi.Text.get_caret_offset(text)
+                if selections:
+                    selection = Atspi.Text.get_selection(text, 0)
+                    start, end = selection.start_offset, selection.end_offset
+                if not 0 <= start <= end <= count:
+                    return None
+                return {'node': node, 'semantic': True, 'text': text, 'count': count,
+                        'original': original, 'start': start, 'end': end}
+            except Exception:
+                return None
+
+        direct = plan_for(root)
+        if direct:
+            return direct
+
+        queue = deque([(root, 0)])
+        plans = []
+        seen = {id(root)}
+        visited = 0
+        while queue and visited < 150:
+            node, depth = queue.popleft()
+            visited += 1
+            if depth >= 5:
+                continue
+            try:
+                for i in range(min(node.get_child_count(), 100)):
+                    child = node.get_child_at_index(i)
+                    if child is None or id(child) in seen:
+                        continue
+                    seen.add(id(child))
+                    data = self.describe(child)
+                    if ('showing' in data['states'] and 'editable' in data['states']
+                            and 'EditableText' in data['interfaces'] and 'Text' in data['interfaces']
+                            and child.get_role() != Atspi.Role.PASSWORD_TEXT):
+                        candidate = plan_for(child)
+                        if candidate:
+                            plans.append(candidate)
+                            if len(plans) > 1:
+                                return {'node': root, 'semantic': False}
+                    queue.append((child, depth + 1))
+            except Exception:
+                continue
+        if len(plans) == 1:
+            plans[0]['backend_detail'] = 'focused editable descendant'
+            return plans[0]
+        return {'node': root, 'semantic': False}
 
     def insert_focused_text(self, inserted):
         """Insert semantically only when caret state is reliable before mutation.
@@ -279,14 +322,15 @@ class Desktop:
         editable = node.get_editable_text_iface()
         if start != end and not Atspi.EditableText.delete_text(editable, start, end):
             raise RuntimeError('Could not replace selected text')
-        if not Atspi.EditableText.insert_text(editable, start, inserted, len(inserted.encode('utf-8'))):
+        if not Atspi.EditableText.insert_text(editable, start, inserted, len(inserted)):
             raise RuntimeError('Text insertion failed; inspect field before retrying')
         Atspi.Text.set_caret_offset(text, start + len(inserted))
         pump(.05)
         actual = Atspi.Text.get_text(text, 0, Atspi.Text.get_character_count(text))
         if actual != expected:
             raise RuntimeError('Inserted text readback mismatch; inspect field before retrying')
-        return {'kind': 'type_text', 'executed': True, 'verified': True, 'backend': 'AT-SPI EditableText', 'evidence': 'readback'}
+        backend = 'AT-SPI EditableText' + ((' (' + plan['backend_detail'] + ')') if plan.get('backend_detail') else '')
+        return {'kind': 'type_text', 'executed': True, 'verified': True, 'backend': backend, 'evidence': 'readback'}
 
     def act(self, snapshot_id, actions, wait_ms=250, screenshot=False, session_id=''):
         bounded_int(wait_ms, 0, 2000, 'wait_ms')

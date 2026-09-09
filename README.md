@@ -14,7 +14,7 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.6.4
+## Local Development Bridge 0.6.5
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
@@ -26,6 +26,10 @@ This revision keeps the important destructive boundaries but removes two practic
 Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
 
 The version immediately before this change is tagged `backup/pre-relaxed-security-20260909T004258Z` at commit `d4d9679`.
+
+## 0.6.5 rich-editor semantic descendant input
+
+When a focused web editor exposes an unreliable text/caret model on its outer AT-SPI wrapper, the Bridge now searches only within that focused editor for a single visible editable descendant with a sane Text/EditableText caret model. If exactly one exists, `type_text` inserts through that descendant and verifies the result by readback; ambiguous descendants still fall back to the consented portal keyboard path. This specifically targets contenteditable/rich-editor structures without introducing DOM scripting, clipboard access, pointer coordinates or new MCP permissions. Unicode AT-SPI insertion now passes a character count rather than UTF-8 byte length.
 
 ## 0.6.4 GNOME portal parent window
 

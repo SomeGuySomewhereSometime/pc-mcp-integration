@@ -11,11 +11,14 @@ except ModuleNotFoundError as exc:
 
 
 class Node:
-    def __init__(self, text='initial', role='entry', active=True, focused=False):
+    def __init__(self, text='initial', role='entry', active=True, focused=False, editable=True, caret=None, children=None):
         self.text = text
         self.role = role
         self.active = active
         self.focused = focused
+        self.editable = editable
+        self.caret = caret
+        self.children = list(children or [])
         self.writes = []
 
     def get_editable_text_iface(self):
@@ -38,12 +41,19 @@ class Node:
     def get_role(self):
         return 0
 
+    def get_child_count(self):
+        return len(self.children)
+
+    def get_child_at_index(self, index):
+        return self.children[index]
+
 
 class FakeDesktop(Desktop):
     def describe(self, node):
-        return {'text': node.text, 'role': node.role, 'interfaces': ['EditableText', 'Text'],
-                'states': ['showing', 'sensitive'] + (['active'] if node.active else [])
-                          + (['focused'] if node.focused else [])}
+        interfaces = ['EditableText', 'Text'] if node.editable else ['Text']
+        return {'text': node.text, 'role': node.role, 'interfaces': interfaces,
+                'states': ['showing', 'sensitive'] + (['editable'] if node.editable else [])
+                          + (['active'] if node.active else []) + (['focused'] if node.focused else [])}
 
     def observe(self, **kwargs):
         self.snapshot = {'snapshot_id': 'next', 'captured_at': time.time(), 'elements': []}
@@ -58,7 +68,7 @@ class DesktopTests(unittest.TestCase):
         p.start(); self.addCleanup(p.stop)
         p = patch('desktop_worker.Atspi.Text.get_n_selections', return_value=0)
         p.start(); self.addCleanup(p.stop)
-        p = patch('desktop_worker.Atspi.Text.get_caret_offset', side_effect=lambda node: len(node.text))
+        p = patch('desktop_worker.Atspi.Text.get_caret_offset', side_effect=lambda node: node.caret if node.caret is not None else len(node.text))
         p.start(); self.addCleanup(p.stop)
         self.d = FakeDesktop(Mock())
         self.node = Node()
@@ -119,6 +129,35 @@ class DesktopTests(unittest.TestCase):
         self.assertTrue(result['results'][0]['verified'])
         self.d.portal.require.assert_not_called()
         self.d.portal.perform.assert_not_called()
+
+    def test_focused_wrapper_uses_single_sane_editable_descendant(self):
+        child = Node(text='conteúdo', focused=False, caret=8)
+        self.node.focused = True
+        self.node.caret = -1
+        self.node.children = [child]
+        self.d.entries['e1'] = (self.node, self.d.signature(self.d.describe(self.node)), self.window, 'test')
+        plan = self.d.focused_text_plan()
+        self.assertTrue(plan['semantic'])
+        self.assertIs(plan['node'], child)
+        self.assertEqual(plan['backend_detail'], 'focused editable descendant')
+
+    @patch('desktop_worker.pump')
+    def test_semantic_insert_uses_character_length_for_unicode(self, _):
+        self.node.focused = True
+        self.node.text = ''
+        self.node.caret = 0
+        self.d.entries['e1'] = (self.node, self.d.signature(self.d.describe(self.node)), self.window, 'test')
+
+        def insert(editable, position, text, length):
+            self.assertEqual(length, len(text))
+            editable.text = editable.text[:position] + text + editable.text[position:]
+            return True
+
+        with patch('desktop_worker.Atspi.EditableText.insert_text', side_effect=insert), \
+             patch('desktop_worker.Atspi.Text.set_caret_offset', return_value=True):
+            result = self.d.insert_focused_text('ã—')
+        self.assertTrue(result['verified'])
+        self.assertEqual(self.node.text, 'ã—')
 
     def test_expired_observation_rejected(self):
         self.d.snapshot['captured_at'] -= 121
