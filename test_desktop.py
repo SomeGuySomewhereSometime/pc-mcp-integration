@@ -135,6 +135,41 @@ class DesktopTests(unittest.TestCase):
             with self.subTest(action=str(action)[:80]), self.assertRaises(ValueError):
                 self.d.validate_actions([action])
 
+    def test_portal_start_uses_exported_parent_handle(self):
+        p = Portal.__new__(Portal)
+        p.state, p.session_id, p.streams = 'closed', '', []
+        p.pipeline, p.fd, p.error, p.pending = None, None, None, None
+        p.last_activity, p.generation, p.closed_match, p.session = time.monotonic(), 0, None, None
+        p.parent_window, p.parent_surface = None, None
+        p.parent_handle, p.parent_raw_handle = '', ''
+        p.bus, p.dbus = Mock(), Mock()
+        p.dbus.String.side_effect = lambda value: value
+        p.dbus.ObjectPath.side_effect = lambda value: value
+        p.dbus.UInt32.side_effect = lambda value: value
+        p.dbus.Boolean.side_effect = lambda value: value
+        p.close = Mock(return_value={})
+        calls = []
+
+        def prepare(callback):
+            p.parent_handle = 'wayland:test-parent'
+            callback()
+
+        def request(interface, method, args, options, callback):
+            calls.append((method, args))
+            if method == 'CreateSession':
+                callback({'session_handle': '/session'})
+            elif method in ('SelectDevices', 'SelectSources'):
+                callback({})
+            elif method == 'Start':
+                callback({'devices': 3, 'streams': [(7, {'logical_size': [100, 100]})]})
+
+        p._prepare_parent_window = prepare
+        p._request = request
+        result = p.start()
+        start_args = next(args for method, args in calls if method == 'Start')
+        self.assertEqual(start_args[1], 'wayland:test-parent')
+        self.assertEqual(result['state'], 'active')
+
     def test_portal_revocation_and_session_identity(self):
         p = Portal.__new__(Portal)
         p.state, p.session_id = 'closed', 'a'

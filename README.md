@@ -14,7 +14,7 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.6.3
+## Local Development Bridge 0.6.4
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
@@ -26,6 +26,10 @@ This revision keeps the important destructive boundaries but removes two practic
 Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
 
 The version immediately before this change is tagged `backup/pre-relaxed-security-20260909T004258Z` at commit `d4d9679`.
+
+## 0.6.4 GNOME portal parent window
+
+GNOME/Wayland can refuse or fail to present RemoteDesktop/ScreenCast permission dialogs when `parent_window` is empty. The desktop worker now creates a 1x1 transparent GTK4 toplevel, exports its xdg-foreign handle with GdkWayland, passes `wayland:<handle>` to `RemoteDesktop.Start`, and destroys the helper parent when the session closes. This keeps the user-consent portal while fixing the previously invisible/pending dialog.
 
 ## 0.6.3 rich web editor fallback
 

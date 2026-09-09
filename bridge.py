@@ -60,7 +60,7 @@ BRIDGE_CONFIG = load_bridge_config()
 
 app = FastAPI(
     title="ChatGPT Local Bridge",
-    version="0.6.3",
+    version="0.6.4",
 )
 
 
@@ -208,7 +208,7 @@ def command_is_blocked(command: str) -> bool:
 def health():
     return {
         "ok": True,
-        "version": "0.6.3",
+        "version": "0.6.4",
         "workspace": str(WORKSPACE),
         "workspace_exists": WORKSPACE.exists(),
         "command_workspace": str(COMMAND_WORKSPACE),

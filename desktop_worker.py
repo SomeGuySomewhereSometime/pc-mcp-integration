@@ -432,6 +432,10 @@ class Portal:
         self.last_activity = time.monotonic()
         self.generation = 0
         self.closed_match = None
+        self.parent_window = None
+        self.parent_surface = None
+        self.parent_handle = ''
+        self.parent_raw_handle = ''
 
     def status(self):
         return {'state': self.state, 'session_id': self.session_id, 'streams': self.streams,
@@ -465,6 +469,69 @@ class Portal:
             self.pending = None
             raise
 
+    def _prepare_parent_window(self, callback):
+        """Export a tiny Wayland parent so GNOME can present portal dialogs reliably."""
+        if self.parent_handle:
+            callback()
+            return
+        gi.require_version('Gtk', '4.0')
+        gi.require_version('GdkWayland', '4.0')
+        from gi.repository import Gtk, GdkWayland
+        Gtk.init()
+        window = Gtk.Window()
+        window.set_title('ChatGPT Local Bridge')
+        window.set_decorated(False)
+        window.set_resizable(False)
+        window.set_default_size(1, 1)
+        window.set_opacity(0.0)
+        window.present()
+        pump(.05)
+        surface = window.get_surface()
+        if surface is None:
+            window.destroy()
+            raise RuntimeError('Could not create a Wayland parent surface for desktop permission')
+        generation = self.generation
+        def exported(toplevel, handle, user_data=None):
+            if generation != self.generation:
+                try:
+                    GdkWayland.WaylandToplevel.drop_exported_handle(toplevel, handle)
+                except Exception:
+                    pass
+                window.destroy()
+                return
+            if not handle:
+                self.fail('Wayland parent handle export returned no handle')
+                return
+            self.parent_window = window
+            self.parent_surface = toplevel
+            self.parent_raw_handle = str(handle)
+            self.parent_handle = 'wayland:' + self.parent_raw_handle
+            try:
+                callback()
+            except Exception as exc:
+                self.fail(short(exc, 300))
+        if not GdkWayland.WaylandToplevel.export_handle(surface, exported, None):
+            window.destroy()
+            raise RuntimeError('Could not export Wayland parent handle for desktop permission')
+
+    def _close_parent_window(self):
+        if self.parent_surface is not None and self.parent_raw_handle:
+            try:
+                gi.require_version('GdkWayland', '4.0')
+                from gi.repository import GdkWayland
+                GdkWayland.WaylandToplevel.drop_exported_handle(self.parent_surface, self.parent_raw_handle)
+            except Exception:
+                pass
+        if self.parent_window is not None:
+            try:
+                self.parent_window.destroy()
+            except Exception:
+                pass
+        self.parent_window = None
+        self.parent_surface = None
+        self.parent_handle = ''
+        self.parent_raw_handle = ''
+
     def start(self):
         if self.state in ('pending', 'active'):
             return self.status()
@@ -485,7 +552,8 @@ class Portal:
             self._request(self.CAST, 'SelectSources', [self.session],
                           {'types': d.UInt32(1), 'multiple': d.Boolean(False), 'cursor_mode': d.UInt32(2)}, sources)
         def sources(data):
-            self._request(self.REMOTE, 'Start', [self.session, ''], {}, started)
+            self._prepare_parent_window(
+                lambda: self._request(self.REMOTE, 'Start', [self.session, self.parent_handle], {}, started))
         def started(data):
             if int(data.get('devices', 0)) & 3 != 3 or len(data.get('streams', [])) != 1:
                 raise RuntimeError('Keyboard, pointer and exactly one monitor are required')
@@ -514,6 +582,7 @@ class Portal:
 
     def close(self):
         self.generation += 1
+        self._close_parent_window()
         if self.pending:
             path, match = self.pending
             match.remove()

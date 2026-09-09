@@ -371,3 +371,28 @@ Live v0.6.2 testing proved semantic navigation and composer discovery work, but 
 
 ### Estado
 Ready for deployment as v0.6.3. No MCP tool names or schemas changed.
+
+## 2026-09-09 02:29 WEST — ChatGPT
+
+### Tarefa
+Fix GNOME RemoteDesktop consent dialog staying pending without a visible window.
+
+### Ficheiros alterados
+- `desktop_worker.py`
+- `test_desktop.py`
+- `bridge.py`
+- `README.md`
+
+### Alterações
+The worker no longer calls `RemoteDesktop.Start` with an empty parent on Wayland. It creates a transparent 1x1 GTK4 parent, exports an xdg-foreign handle with GdkWayland, passes `wayland:<handle>` to the portal, and releases the exported handle/window on close. Added a regression test that drives the portal callback chain and asserts Start receives a non-empty Wayland parent. Version bumped to 0.6.4.
+
+### Motivo
+The host journal showed `xdg-desktop-portal-gnome: Failed to associate portal window with parent window` at the exact consent attempt, and no dialog appeared. The XDG portal API defines `parent_window` as the application window identifier; GNOME/Wayland in this environment did not reliably present the dialog with an empty identifier.
+
+### Testes
+- `/usr/bin/python3 -B -m unittest -v test_desktop`: 13/13 passed
+- active Bridge venv: `test_bridge test_security test_desktop_mcp`: 29 passed, 4 expected host-integration skips
+- `python3 -m py_compile desktop_worker.py`: passed
+
+### Estado
+Ready for deployment as v0.6.4. No MCP tool/schema change; plugin refresh is not required.
