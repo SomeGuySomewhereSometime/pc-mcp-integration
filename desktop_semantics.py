@@ -147,4 +147,3 @@ def project(observation, nodes, mode, limit, offset=0, locator=None):
     # Truncation of the scan and omission from presentation are distinct.
     result['truncated'] = not observation.get('scan', {}).get('complete', True)
     return result
-
