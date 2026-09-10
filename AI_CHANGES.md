@@ -435,3 +435,272 @@ Handle the real Firefox/ChatGPT case where both the focused wrapper and editable
 
 ### Estado
 Ready for live Firefox/ChatGPT Unicode verification. No MCP tool/schema change.
+
+## 2026-09-09 03:26 WEST — ChatGPT
+
+### Tarefa
+Add compact semantic desktop observation view
+
+### Ficheiros alterados
+- `mcp_server.py`
+- `test_desktop_mcp.py`
+
+### Alterações
+Added a compact default view in the MCP layer that scans up to 400 AT-SPI elements internally, ranks useful interactive/context elements, suppresses structural wrapper noise, repairs parent references, exposes attention UI, preserves a full diagnostic mode, and prevents actions against IDs that were scanned internally but not exposed to the model.
+
+### Motivo
+Live Firefox/YouTube testing showed that the accessibility tree is rich but excessively noisy; structural section/panel wrappers can consume the observation budget before useful controls are surfaced.
+
+### Testes
+- /home/user/chatgpt-local-bridge/.venv/bin/python -m unittest -v test_desktop_mcp (8/8 passed)
+- /home/user/chatgpt-local-bridge/.venv/bin/python -m unittest discover -v (42 tests OK, 8 expected skips)
+- /usr/bin/python3 -B -m unittest -v test_desktop (16/16 passed)
+
+### Estado
+Staged and unit-tested; pending live Firefox validation before version bump/release.
+
+### Observações
+desktop_observe gains mode='compact'|'full' at the MCP schema level, so deployment requires plugin/catalog refresh. No worker, portal, permission or sandbox policy changes in this step.
+
+## 2026-09-09 03:39 WEST — ChatGPT
+
+### Tarefa
+Relax compact desktop targeting with unique semantic locators
+
+### Ficheiros alterados
+- `mcp_server.py`
+- `test_desktop_mcp.py`
+
+### Alterações
+Changed compact desktop targeting so the full internally observed snapshot remains authoritative. Direct element IDs from that snapshot may be acted on even if omitted from compact output, and desktop_act now accepts unique semantic locators resolved against hidden internal elements. Ambiguous or stale/unobserved targets are refused.
+
+### Motivo
+Compact output should reduce reasoning noise without forcing extra observations merely to expose a target that the Bridge already observed internally. Unique semantic locators preserve deterministic targeting while removing unnecessary friction.
+
+### Testes
+- 13/13 test_desktop_mcp passed in active Bridge venv
+- 16/16 test_desktop passed with /usr/bin/python3
+- 47-test full discovery passed with 8 expected integration skips
+- git diff --check clean
+
+### Estado
+Staged and unit-tested; pending live Firefox validation before release/version bump.
+
+### Observações
+This supersedes the previous compact-view note that hidden internal IDs were blocked. Hidden targets remain constrained to the current snapshot; semantic locators must resolve to exactly one showing/sensitive target. Raw pointer policy and GNOME consent rules are unchanged.
+
+
+## 2026-09-09 13:00 WEST — Codex
+
+### Tarefa e motivo
+Implement the authorized audit fixes in the existing Bridge: one authoritative desktop
+snapshot, discover controls beyond the previous 400-node ceiling, deterministic scoped
+locators, operation verification, managed broad-workspace shell jobs and useful diagnostics.
+Preserved the pre-existing compact/locator work, current filesystem/network policy, portal
+consent and editor integrations. No installer changes, Git commit or publication.
+
+### Ficheiros alterados
+`desktop_worker.py`, `desktop.py`, `desktop_semantics.py`, `mcp_server.py`, `bridge.py`,
+`security.py`, `command_sessions.py`, `diagnostics.py`, `README.md`, this log and the
+corresponding desktop/MCP/command/bridge tests and live acceptance scripts.
+
+### Alterações
+- Worker owns snapshot identity, retained ancestry, presentation, query and action matching;
+  removed MCP-side snapshot cache. Existing serialized private pipe remains the concurrency model.
+- Separate scan budgets from output limits; retain hidden intermediary structure and report
+  incomplete scans explicitly. Query/pagination preserves snapshot identity. Scoped unique
+  locators revalidate current target and ancestry immediately before acting.
+- Typed MCP actions/locators/expectations; verify tabs/toggles/scroll and explicit target
+  postconditions, return observed changes, stop on failed required confirmation.
+- Bounded incremental stdout/stderr, background job handles, polling and owned-group cleanup;
+  synchronous output also bounded. No project/task permission scoping was added.
+- Retain bounded worker diagnostic stderr, best-effort credential redaction, opt-in process
+  arguments and journal filtering before limit. Empty journal searches return zero entries.
+- Version 0.6.7; catalogue adds desktop_query and command_session (28 exported tools).
+
+### Testes e resultados
+- System Python: 24 desktop/semantic tests passed.
+- Venv full discovery: 48 tests OK, 10 environment/integration skips; subsequent journal
+  empty-result regression: focused 19 tests OK, 1 integration skip.
+- Host Bubblewrap suite: 21 tests OK, 1 systemd integration skip; includes live output,
+  cancellation, timeout, large-output bounds and child cleanup.
+- Real MCP stdio in a transient user service: catalogue 28, incremental shell session,
+  GTK Unicode readback, stale-snapshot rejection and verified checkbox toggle passed.
+- Real Firefox localhost fixture: 602 scanned nodes, late button e530 found despite compact
+  output of 20, focused input confirmed, button effect confirmed by readback, fixture closed.
+- Live journal empty-match check returned count 0. git diff --check clean before deployment.
+
+### Limitações verificadas
+Firefox on this host accepts both AT-SPI set_text and focused insertion without changing
+even a plain HTML input; both live probes failed readback and stopped correctly. Focus did
+not fix it. The passing Firefox action fixture uses prefilled text and is NOT proof of
+Firefox text input. check_browser_mcp.py --text-probe preserves the failing replacement
+probe. GTK Unicode input passed. ChatGPT rich-editor input, portal keyboard and Chrome
+were not validated in this change. No ChatGPT message was sent. A blank Firefox window
+created during an earlier data-URL experiment was left because later ownership was not
+unambiguous; the named localhost fixture windows were closed.
+ChatGPT must refresh its tool catalogue to discover the new schema/tools; local wire
+acceptance is not proof of the hosted ChatGPT connector path. Deployment results follow.
+
+
+### Instalação confirmada — 2026-09-09 13:02 WEST
+Installed 16 reviewed source/test/documentation files in `/home/user/chatgpt-local-bridge`.
+Pre-install source backup and manifest: `/home/user/chatgpt-local-bridge-backups/pre-v067-20260909T120107Z`.
+Only `mcp-tunnel-chatgpt-local-bridge.service` was restarted (13:01:07 WEST). Service active,
+healthz/readyz HTTP 200, installed MCP process 837617, cwd installed directory, actual
+BRIDGE_WORKSPACE=/home/user. Installed source reports 0.6.7. A bare shell import uses
+the source default workspace instead; this was not confused with the service environment.
+Installed-copy MCP acceptance repeated successfully: 28 tools, shell session output,
+GTK Unicode readback, stale rejection and checkbox verification. ChatGPT-hosted catalogue
+refresh and full ChatGPT-editor/browser text acceptance remain unverified as noted above.
+# 2026-09-09 — Isolated scratch editor and process-scoped observation
+
+Added text-editor-scratch policy, fresh_data_directory launch support, and the
+XDG_DATA_HOME application-environment entry. Live GNOME Text Editor 50.0 restored
+existing session documents despite --standalone --new-window, so scratch launches now
+receive fresh private application-data directories. The first test stopped before any
+write; its raw diagnostic output was removed after detecting restored sensitive content.
+No credential values are intentionally retained in this project or test report.
+
+Added desktop_observe(process_id=pid), window process_id metadata, and retained process
+scope for action readback. Added a focus no-op when the target already has the requested
+focus, avoiding a failing redundant AT-SPI grab_focus call observed in the real editor.
+The PID filter does not imply one window per process or guarantee compositor activation.
+
+Validation: 26 desktop/semantic tests and 7 focused launch/MCP tests passed. Local MCP
+wire test using the real GNOME editor passed: one blank isolated window, focused editor,
+set_text('olá'), and exact subsequent AT-SPI readback. No message was submitted and no
+pre-existing document was intentionally edited. No screenshot verification or hosted
+ChatGPT test yet; actual inactive-window focus recovery remains unproven.
+
+Installed the changed Bridge runtime files and scratch alias with backup at
+/home/user/chatgpt-local-bridge-backups/scratch-20260909T181504. Installed MCP schema
+contains process_id; read-only observation of the remaining test draft confirmed one
+window and exact olá text. Local Dev Bridge healthz/readyz both return 200 and OpenAI
+polling resumed successfully. Closed only the two earlier test-created editor instances.
+All other host configuration was preserved. Browser MCP, Unity and Blender are unchanged. No commit/push.
+# 2026-09-09 — GNOME 50 compositor window focus
+
+User authorized implementing a GNOME backend after real AT-SPI window focus failed.
+Inspected gnome-desktop-mcp as an architectural reference (its declared range stops
+at GNOME 49) and the installed GNOME Shell 50.1 source/resources. Implemented an
+original small extension rather than installing the full third-party MCP. No third-party
+source was copied. New gnome_windows.py and the desktop worker bind PID + exact title
+to one compositor ID and recheck identity before focusing. Existing AT-SPI observation
+remains the final focus verifier; failed focus now stops a batch. Added backend status,
+receipt and window-binding metadata and guidance for window-level focus.
+
+Validation: 29 Python desktop/semantic/identity tests passed. The first isolated GNOME
+test timed out during startup with inherited desktop settings. Explicit GNOME user
+session and Wayland environment resolved the harness startup. On a separate GNOME
+50.1 compositor, inactive-window and minimized-window recovery passed. D-Bus transport
+passed as well via check_gnome_windows.js. Six MCP wrapper tests also passed.
+These checks do not establish main-session
+acceptance. The extension installed successfully; the current shell has not discovered
+it, so enablement needs a new login. No shell restart/logout was performed automatically. Runtime changes installed with
+backup at /home/user/chatgpt-local-bridge-backups/gnome-focus-20260909T185210.
+Local Dev Bridge healthz/readyz returned 200. Backend availability correctly remains
+false until the GNOME extension loads at login; existing AT-SPI remains available.
+Other MCPs and credentials were not modified. No commit/push.
+
+## 2026-09-09 — Main-session GNOME focus verified after reboot
+
+After the user restarted the PC, confirmed GNOME extension ACTIVE, window backend
+available=true, both browser services active, and Local Dev Bridge healthz/readyz 200.
+Tested the installed Bridge through MCP stdio in the real user desktop. The first
+attempt used unsupported expect.states.active and was rejected before writing; removed
+that test argument and used the worker's built-in focus verification plus fresh reads.
+The production code was not changed for this test correction.
+
+Successful run created isolated scratch PIDs 17721 and 17854, wrote olá and segundo,
+confirmed PID 17721 became inactive, and focused its observed window using backend
+GNOME Shell window focus with verified=true. Replaced only its text with olá novamente;
+readback confirmed the exact replacement and unchanged segundo in PID 17854. Closed
+only the second test instance and left the first draft open. A blank draft from the
+initial test also remains. No pre-existing documents edited or saved.
+
+Updated README status. Hosted ChatGPT focus recovery, main-session minimized recovery
+and screenshots remain pending. The earlier isolated GNOME minimized-window test passed.
+
+
+## 2026-09-10 — Installed Bridge pointer regression baseline
+
+Preserved pre-existing tracked/untracked source in a mode-0600 local archive under
+`backups/before-pointer-tests-20260910-174025/`, with the baseline Git HEAD. No
+credentials or configuration were printed or published; existing edits remain.
+Added `check.sh`, coordinate, Browser orchestration and worker dispatch tests, plus
+an isolated Chrome acceptance runner. Bound initial DOM rectangle, scroll and
+visibility during calibration. Updated installed-suite instructions.
+
+Validation: baseline virtualenv 49 tests / 10 skips; system GI 24 passed. Final
+virtualenv 58 tests / 11 skips, system GI 30 passed; opted-in host security,
+regression and command-session suite 21 passed. Chrome guard acceptance: 11
+scenarios passed (10 expected refusals, one stable trusted browser click).
+Read-only sandbox initially prevented test temporary directories; the authorized
+host run passed. Browser fixture initially used an unsuitable element-evaluation
+context; corrected it to a page expression and asserted guard installation plus
+expected refusal messages to prevent false positives. No physical portal input
+acceptance claimed; the final DOM-to-OS timing gap remains explicitly documented.
+
+Post-deployment: restarted only `mcp-tunnel-chatgpt-local-bridge.service`;
+`/healthz` and `/readyz` returned HTTP 200. `check_desktop_mcp.py` passed with
+29 catalogued tools: command-session completion, Unicode write/readback,
+expected stale-snapshot refusal, and locator checkbox verification in its owned
+GTK fixture. A Firefox Snap AT-SPI cache AppArmor warning appeared without
+failing the fixture; no sandbox/profile changes were made. Unity application
+probe remained unavailable and Blender refused the application connection;
+Browser catalogue responded, extension connectivity was not probed.
+
+
+## 2026-09-10 — Explicit physical-click outcomes and reversible scope
+
+The user supplied a live ChatGPT acceptance report: final hover succeeded, the
+button moved in the final gap, and one OS click landed outside it (~42 ms after
+mutation). This is user-reported physical evidence, not a rerun in this change.
+
+`browser_desktop.py` now separates hover evidence, dispatch receipt and click
+readback. Misses return target_missed; absent/malformed readback is unconfirmed.
+Both return ok=false; lost dispatch receipts retain unknown execution rather than
+throwing away ambiguity. Click verified remains false pending application-effect
+verification. No click retries. The page clears earlier click evidence and
+rechecks geometry just before dispatch, then retains the first trusted click.
+This does not eliminate the DOM-to-OS race or distinguish competing input owners.
+
+`mcp_server.py` preserves the structured outcome as MCP isError for failed or
+uncertain operations. The new click_scope parameter defaults to unspecified and
+refuses clicks before any transport unless the caller declares reversible. This
+is a caller policy declaration for low-impact actions, not automatic page-risk
+classification. Tool instructions forbid raw-input circumvention for consequential
+actions. No Bridge configuration, installer or other MCP was changed.
+
+Tests: 17 focused Python tests passed; full runner 65 tests / 11 expected skips,
+plus 30 system-GI tests passed. Headless Chrome: 12 scenarios passed including a
+controlled post-validation target move and retention of the first missed click.
+The later synthetic browser click tests evidence retention only, not an automatic
+Bridge retry. New physical GNOME acceptance remains separate. Docs describe the
+new result contract and required ChatGPT catalogue refresh. Pre-edit checkpoint:
+backups/before-click-outcomes-20260910-180359/source.tar.gz (private, mode 0600).
+
+Deployment verification: stdio MCP catalogue exposed click_scope and a real
+wire call without it returned the expected refusal before input. Restarted only
+mcp-tunnel-chatgpt-local-bridge.service; /healthz and /readyz both returned 200.
+ChatGPT-side catalogue refresh has not been performed by this session.
+
+
+## 2026-09-10 — v0.7.0 source release preparation
+
+User authorized commit, non-force push and release publication in the existing
+private SomeGuySomewhereSometime/pc-mcp-integration repository. Remote master was
+d4d96794aaa4a9bfddfff818aee08fe6054c2738; no remote releases/version tags existed.
+Local version tags v0.6.0 through v0.6.6 are retained unchanged. v0.7.0 reflects
+new click-scope compatibility requirements. Added the exact installed GNOME
+extension source so the documented focus component can be restored. No installer,
+Browser service or running editor configuration was changed. Browser MCP remains
+a separate prerequisite, explicitly documented in README and release notes.
+
+Release checks: 65 tests / 4 expected skips with host sandbox/systemd flags, 30
+GI tests passed, 12 isolated Chrome scenarios passed. User's subsequent physical
+ChatGPT acceptance is recorded separately in RELEASE_NOTES.md, including observed
+miss and lost-readback behavior and remaining disposable tabs. Credential scan
+found only the synthetic URL in a redaction test. Preserve the previous remote
+master under baseline/published-before-v0.7.0 before advancing the branch.

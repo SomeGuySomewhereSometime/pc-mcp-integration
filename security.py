@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import pwd
 import subprocess
+import threading
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -146,11 +147,33 @@ def run_sandbox(workspace: Path, cwd: Path, config: dict, argv: list[str], *,
         fd = os.memfd_create("bridge-git-identity", os.MFD_CLOEXEC)
         os.write(fd, identity)
         os.lseek(fd, 0, os.SEEK_SET)
-        return subprocess.run(sandbox_argv(workspace, cwd, config, argv, read_only=read_only, git_config_fd=fd),
-                              input=input_text, capture_output=True, text=True,
-                              timeout=max(1, min(timeout, 300)), env=env, pass_fds=(fd,))
-    except subprocess.TimeoutExpired as exc:
-        raise HTTPException(408, "Operation exceeded its execution deadline") from exc
+        # Reuse the bounded pipe reader for synchronous calls too. Import here avoids
+        # the command-session launcher's dependency on these sandbox helpers.
+        from command_sessions import Job
+        command = sandbox_argv(workspace, cwd, config, argv, read_only=read_only, git_config_fd=fd)
+        process = subprocess.Popen(command, stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                                   pass_fds=(fd,), start_new_session=True)
+        job = Job(process, max(1, min(timeout, 300)), cwd)
+        if input_text is not None:
+            def feed():
+                try:
+                    process.stdin.write(input_text.encode())
+                    process.stdin.flush()
+                except BrokenPipeError:
+                    pass
+                finally:
+                    process.stdin.close()
+            threading.Thread(target=feed, daemon=True).start()
+        job.done.wait()
+        result = job.read(limit=262144)
+        if job.timed_out:
+            raise HTTPException(408, {'error': 'Operation exceeded its execution deadline',
+                                     'stdout':result['stdout'], 'stderr':result['stderr']})
+        out, err = result['stdout'], result['stderr']
+        if result['output_truncated']:
+            out = '[earlier output truncated]\n' + out
+        return subprocess.CompletedProcess(command, process.returncode, out, err)
     finally:
         if fd is not None:
             os.close(fd)

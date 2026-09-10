@@ -6,7 +6,10 @@
     },
     "chrome": {
       "executable": "/usr/bin/google-chrome",
-      "allow_args": false
+      "allow_args": false,
+      "fixed_args": [
+        "--force-renderer-accessibility=complete"
+      ]
     },
     "text-editor": {
       "executable": "/usr/bin/gnome-text-editor",
@@ -46,6 +49,15 @@
         "-projectPath",
         "/home/user/Projects/ExampleGame"
       ]
+    },
+    "text-editor-scratch": {
+      "executable": "/usr/bin/gnome-text-editor",
+      "fixed_args": [
+        "--standalone",
+        "--new-window"
+      ],
+      "fresh_data_directory": true,
+      "allow_args": false
     }
   },
   "process_kill": {

@@ -68,7 +68,7 @@ class BridgeTests(unittest.TestCase):
     def test_journal_query_is_bounded_and_filters_text(self):
         fake = subprocess.CompletedProcess(
             args=[], returncode=0,
-            stdout="first line\nAppArmor denied demo\nlast line\n", stderr=""
+            stdout="AppArmor denied demo\n", stderr=""
         )
         with patch.object(bridge.subprocess, "run", return_value=fake) as run:
             result = bridge.journal_query(
@@ -76,6 +76,15 @@ class BridgeTests(unittest.TestCase):
             )
         self.assertEqual(result["lines"], ["AppArmor denied demo"])
         self.assertIn("--dmesg", run.call_args.args[0])
+        self.assertIn('--grep', run.call_args.args[0])
+        self.assertEqual(run.call_args.args[0][run.call_args.args[0].index('-n')+1], '10')
+
+    def test_journal_no_matches_is_an_empty_result_not_an_error(self):
+        fake = subprocess.CompletedProcess(args=[], returncode=1, stdout='', stderr='')
+        with patch.object(bridge.subprocess, 'run', return_value=fake):
+            result = bridge.journal_query(bridge.JournalQueryRequest(query='no-such-entry'))
+        self.assertEqual(result['count'], 0)
+        self.assertEqual(result['lines'], [])
 
     def test_process_kill_owned_allowlisted_child(self):
         child = subprocess.Popen(["/usr/bin/sleep", "30"])

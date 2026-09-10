@@ -14,14 +14,206 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.6.6
+## Local Development Bridge 0.7.0
+
+This is a private, host-specific integration backup, not a portable installer.
+The Browser MCP server/Chrome extension is a separate prerequisite at
+`127.0.0.1:8931/mcp`; its installation and credentials are not bundled here.
+The matching GNOME 50 window extension source is included under
+`gnome-extension/local-dev-bridge-windows@local`. See RELEASE_NOTES.md for
+migration, test evidence and the remaining physical-click race.
+
+
+### Physical browser click results and scope
+
+`desktop_browser_act` clicks now require `click_scope="reversible"`; omission
+refuses before any Browser/desktop operation. Use this only for low-impact
+reversible actions. Consequential actions must use semantic tools; raw input is
+not a workaround. Hover-only `action="move"` needs no scope declaration.
+Refresh the ChatGPT Local Dev Bridge tool catalogue after deploying this change.
+
+A verified hover is not a verified click. `click_status` distinguishes target hit,
+miss and unconfirmed outcome; missed/uncertain clicks return MCP errors with
+structured receipts, never automatic retries. Even a target hit needs a separate
+check of the intended application effect. The DOM-to-OS race remains. See
+BROWSER_FALLBACK.md for the full contract and evidence limits.
+
+### Reproducible installed-checkout checks
+
+Run `./check.sh` from this checkout (or use its absolute path from any directory).
+It uses `.venv/bin/python` for MCP/FastAPI and `/usr/bin/python3` for GI worker
+checks. The suite uses standard-library `unittest`; pytest is not required.
+Temporary directory writes are required. Opt-in desktop and host integration
+skips are reported explicitly; the system-Python pass must not skip GI checks.
+
+Host isolation/process checks, outside a nested Bridge sandbox:
+
+```bash
+BRIDGE_SANDBOX_TESTS=1 BRIDGE_SYSTEMD_TESTS=1 ./check.sh
+```
+
+The optional browser guard acceptance uses a separate headless Chrome profile:
+
+```bash
+python3 -B check_browser_geometry.py --playwright /absolute/path/to/node_modules/playwright
+```
+
+It checks the actual injected JavaScript against moved/resized/replaced/removed
+or disabled/hidden targets, overlays, scroll, document title and viewport changes,
+plus one trusted browser click and listener cleanup. It does not use GNOME portal
+input or certify the live Browser MCP extension connection. See BROWSER_FALLBACK.md
+for the physical-input boundary and remaining acceptance work.
+
+
+### GNOME 50 window focus backend
+
+`gnome-extension/local-dev-bridge-windows@local` is a small original GNOME Shell
+extension for this Bridge. It exposes only Ping, process-filtered ListWindows and
+Focus on the session bus at `/org/localdevbridge/Windows`. It does not inject input,
+read files, capture screenshots, or expose arbitrary code execution. Enabling it
+allows local processes in the user's session to call those window operations;
+disabling it in GNOME Extensions unexports the interface. Locked sessions reject
+window listing and focus. Browser/Unity/Blender integrations remain separate.
+
+`gnome_windows.py` connects the AT-SPI worker to that interface. Observations bind a
+window only when its PID and complete title uniquely match one compositor window.
+The binding contains an extension-session epoch and stable window sequence; Focus
+rechecks ID, PID and title before acting. Ambiguous matches are not guessed. Window
+records expose `compositor_window_id` when bound. `desktop_status().window_focus`
+reports availability. An unavailable extension leaves the existing AT-SPI path intact.
+
+Use `focus` on the observed **window** element to restore/activate it, then observe
+again and target its text field. Compositor acceptance is followed by AT-SPI active
+state verification. An unconfirmed focus stops subsequent batch actions. Minimized
+window focus can pass the showing check only for a bound compositor window.
+
+GNOME Shell 50.1 isolated tests passed inactive and minimized window activation.
+After the user's PC restart, the extension is ACTIVE and backend availability is true.
+A real main-session MCP test opened two isolated drafts in separate processes, wrote
+`olá` and `segundo`, then recovered the inactive first window using the GNOME backend
+with verified=true and replaced its text with `olá novamente`. Readback confirmed both
+the replacement and the unchanged second draft. Hosted ChatGPT acceptance of this focus
+recovery and main-session minimized-window recovery remain separate checks. GNOME 50
+does not dynamically discover this new installation using `gnome-extensions enable`;
+its D-Bus ReloadExtension API is explicitly unsupported. Save work, log out, and log
+back in before testing the main desktop. Do not restart/replace the running shell.
+
+For another install, zip metadata.json and extension.js from the extension directory,
+run `gnome-extensions install <zip>`, then enable `local-dev-bridge-windows@local` after
+login. Compatibility is declared only for GNOME 50, which was tested.
+
+Isolated acceptance (a separate session bus and headless compositor):
+
+```bash
+dbus-run-session -- env GNOME_SHELL_SESSION_MODE=user XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=wayland \
+  gnome-shell-test-tool --headless --disable-animations --extension /path/to/extension.zip \
+  /absolute/path/to/BridgeRelaxed/check_gnome_windows.js
+```
+
+The explicit environment avoids a startup hang observed with inherited desktop settings.
+
+### Isolated text scratchpads
+
+Use `app_launch(app="text-editor-scratch")` for a new blank editor. It runs GNOME Text
+Editor with `--standalone --new-window` and a fresh private `XDG_DATA_HOME` per launch.
+The flags alone restored existing documents in the live Text Editor 50.0 test, so they
+are insufficient to guarantee a blank scratchpad on this host. Application data stays
+under `<workspace>/.bridge-scratch/<unique-id>` (returned as `data_directory`) and is
+not automatically deleted; save important drafts explicitly from the editor.
+This separates session data, not filesystem access, and leaves HOME unchanged.
+
+Pass the returned `pid` as `desktop_observe(process_id=pid)`. The filter is applied before
+traversing application windows, and window records expose `process_id`. It does not
+guess another process when no matching application is found. A process can own multiple
+windows, so check the returned windows before writing. The scope survives action readback.
+
+Observe, confirm the window is active (or focus and observe again), confirm the target
+editor is empty and focused, then set its text and verify exact readback. Focusing an
+already focused element/active window is an observed no-op; inactive-window activation
+still depends on the application's AT-SPI implementation and must be verified.
+Live local MCP testing passed blank launch and `olá` readback. Hosted ChatGPT blank
+scratchpad testing was reported successful by the user. Local main-session inactive
+window recovery also passed after the GNOME extension loaded. Hosted recovery and
+screenshot verification remain separate checks. Refresh the Local Dev Bridge tool
+catalogue for `process_id` if it has not already been refreshed.
 
 Python MCP server for `/home/user`. Code and file operations belong here;
 live Blender and Unity state belongs to their respective MCPs.
 
+### 0.6.7: one desktop snapshot, searchable observations, managed shell jobs
+
+The desktop worker owns discovery, raw ancestry, snapshot identity, semantic matching,
+revalidation and actions. The MCP server no longer has `_DESKTOP_VIEW` or a second
+copy of target authority. Requests are serialized by the existing private-pipe client.
+Two conversations still share one real desktop: a new observation invalidates the old
+snapshot. A valid newer snapshot can no longer be overwritten by delayed server-side
+compaction. Restarting the worker also discards all old target references.
+
+`desktop_observe` defaults to a compact response of 150 elements, but discovery does
+not stop after 400 elements. It traverses hidden intermediaries and retains their real
+ancestry. Default discovery budgets are 10,000 nodes and five seconds, configurable
+with `scan_limit` (100–20,000) and `scan_ms` (100–15,000). A depth cap of 64 is reported
+when reached. `scan.complete` and `scan.reasons` distinguish an incomplete scan from
+controls merely omitted from presentation. `max_elements` controls only output (1–1,000).
+
+Use `desktop_query(snapshot_id, locator, max_elements, offset)` to search all retained
+nodes or follow `next_offset` without invalidating the snapshot. Full/query output also
+includes hidden diagnostic ancestors. Compact scoring never controls action authority;
+tiny controls remain queryable. Window and document locator fields match exact titles,
+case-insensitively, and ancestor matching uses the worker's original ancestry.
+
+Semantic actions resolve a unique compatible target in the worker, prefer matching active
+windows if no explicit window scope was given, and re-read target/ancestor context before
+acting. Uniqueness means uniqueness within the observed nodes; receipts expose that scope
+and scan completeness rather than claiming unexamined UI was ruled out. `scroll_into_view`
+can target an observed offscreen element. Other actions keep showing/sensitive checks.
+`expect` supports target text, numeric value and boolean states. Tab switches, common
+toggles and scroll visibility have automatic postconditions. `changes` describes observed
+target changes; this is not a general DOM diff. Failure to confirm a required state stops
+the batch. An accepted operation is never, by itself, evidence of the intended page effect.
+
+`run_command(background=true, timeout=0)` starts an owned shell job using the same broad
+configured workspace and network policy. `command_session(read|stop|list)` returns output,
+status, exit code and separate stdout/stderr offsets. Reuse the returned offsets for new
+output. Each stream keeps a bounded 256 Ki-character tail and reports dropped output.
+Synchronous shell calls also drain bounded buffers instead of collecting unlimited output.
+Background jobs can outlive individual tool requests; they are stopped on Bridge exit and
+their handles do not survive restarts. Use `app_launch` for independent GUI applications.
+No new per-project or per-task filesystem restriction was introduced.
+
+`journal_query` applies its literal message filter in journalctl before limiting results.
+`process_info(include_args=true)` optionally includes arguments. Diagnostic arguments,
+journal lines and worker errors redact common credential formats on a best-effort basis;
+this is not a guarantee that arbitrary application logs contain no secrets. Worker D-Bus
+errors are retained in a bounded diagnostic tail rather than discarded.
+
+The exported MCP catalogue now includes `desktop_query`, `command_session`, typed action/
+locator fields and compact/full modes. Refresh the ChatGPT connection's tool catalogue
+after deployment; changing the server alone does not prove that a client refreshed it.
+
+Acceptance commands:
+
+```sh
+/usr/bin/python3 -B -m unittest -q test_desktop test_desktop_semantics
+/home/user/chatgpt-local-bridge/.venv/bin/python -B -m unittest discover -q
+BRIDGE_SANDBOX_TESTS=1 /home/user/chatgpt-local-bridge/.venv/bin/python -B -m unittest -q test_security test_regressions test_command_sessions
+/home/user/chatgpt-local-bridge/.venv/bin/python -B check_desktop_mcp.py
+/home/user/chatgpt-local-bridge/.venv/bin/python -B check_browser_mcp.py --exercise
+```
+
+The last two commands intentionally operate disposable test UI. Run them in the same
+desktop/service context as the installed Bridge; AppArmor labels can differ between
+clients. The Firefox exercise opens its own localhost fixture and sends no chat messages.
+The Firefox fixture pre-fills its input: this verifies discovery beyond 400 nodes, focus
+and an observed button effect, not text insertion. `--text-probe` additionally requires
+text replacement. On this host Firefox accepts AT-SPI replacement/insertion without
+changing even a plain HTML input; both probes fail readback and stop correctly. Native
+GTK Unicode writing passed. Firefox/ChatGPT keyboard injection and Chrome remain separate
+live acceptance work; the Bridge must not report semantic text writing as fixed there.
+
 ### 0.6.0: less restrictive where it helps development
 
-This revision keeps the important destructive boundaries but removes two practical bottlenecks. `sandbox.network` can retain the host network namespace for normal development commands while Bubblewrap still isolates host IPC, PID visibility, private runtime mounts, home credentials and capabilities. The operator configuration in this repository enables network access. Git author identity is still the only global Git configuration forwarded into the shell; credential helpers and login profiles remain hidden.
+This revision removes two practical bottlenecks. `sandbox.network` can retain the host network namespace for normal development commands while Bubblewrap isolates host IPC, PID visibility and private runtime mounts. The operator configuration enables network access and mounts the configured workspace broadly. Only explicitly denied paths are hidden: changing HOME does not hide unlisted credentials at absolute paths. Global Git author identity is forwarded; global credential helpers and login profiles are not loaded automatically. Destructive-command patterns are a guardrail, not comprehensive deletion prevention.
 
 Two read-only host diagnostics avoid forcing legitimate inspection through the shell sandbox: `process_info(pid)` reports one current-user process including executable, cwd, command line, AppArmor label, cgroup and namespace IDs; `journal_query(...)` returns a bounded host-journal slice and can restrict it to kernel events. This supports cases such as diagnosing Snap/AppArmor/Firefox without exposing host `/proc` wholesale inside arbitrary shell commands.
 
@@ -58,7 +250,7 @@ ChatGPT connection. No installer or other MCP is replaced. The Sol model in
 ChatGPT calls structured tools; it does not need to generate input scripts or
 use a second model. Refresh the existing connection's tool catalog after deployment.
 
-Four additional tools are available when `desktop.enabled` is true in the local
+Desktop tools are available when `desktop.enabled` is true in the local
 configuration:
 
 - `desktop_status`: capabilities, limits and session state, without starting control.
@@ -92,11 +284,12 @@ outcome, never an invitation to replay input. Observe again before retrying.
 `executed` reports that an operation was accepted; `verified` requires readback
 (currently set_text and focus). Inspect the returned window/image for the broader
 task outcome. A successful click alone does not prove a file was saved. At most 8
-actions, 400 visible elements, 4000 characters for set_text and 256 for raw type_text
+actions, 1000 returned elements, 4000 characters for set_text and 256 for raw type_text
 are allowed per request. `type_text` inserts through an observed focused editable
 element when available, replacing its selection and verifying Unicode text without
-accessing the clipboard. Otherwise it uses keyboard events for ASCII; unsupported
-Unicode is refused instead of silently losing characters. Password text is not returned.
+accessing the clipboard. Otherwise it uses portal keyboard events; Unicode acceptance
+by the compositor does not guarantee that a particular rich web editor receives every
+character. Verify the resulting field. Password text is not returned.
 UI content is untrusted data.
 
 The helper uses `/usr/bin/python3`, GI AT-SPI, D-Bus and GStreamer plugins already
