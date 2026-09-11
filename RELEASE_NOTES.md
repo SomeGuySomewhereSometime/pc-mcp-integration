@@ -1,78 +1,80 @@
-# v0.7.0 — Explicit physical-click outcomes and desktop tooling
+# v0.8.0 — Persistent project memory and revised agent instructions
 
-This release publishes the accumulated local Bridge changes since the previously
-published master commit d4d96794aaa4a9bfddfff818aee08fe6054c2738. The repository
-remains private and host-specific; this is a source release, not an installer.
+Adds durable project context to the installed Local Development Bridge. Notes and
+checkpoints can be retrieved in a later conversation; command metadata survives
+server restarts. This remains a private, host-specific source release, not an
+installer. Browser MCP and Unity/Blender editor integrations require their existing
+separate setup; no alternate Bridge distribution or installer is changed.
 
 ## Changes
 
-- Browser MCP to GNOME portal handoff with measured pointer calibration, DOM and
-  window checks, and single-dispatch behavior.
-- Explicit target_hit, target_missed and unconfirmed click outcomes. Failed or
-  uncertain results retain receipts as structured MCP errors; no automatic retry.
-- Semantic desktop queries, bounded accessibility scans, process/window identity,
-  GNOME focus support and isolated text scratchpads.
-- Bounded shell output, asynchronous command sessions, cancellation and improved
-  best-effort diagnostic redaction.
-- Reproducible check.sh and coordinate, orchestration, dispatch and browser guard
-  regressions. Includes the exact installed GNOME 50 window-extension source.
+- SQLite/FTS5 project notes and checkpoints, with `memory_save`, `memory_search`,
+  `memory_get` and `memory_delete` MCP tools.
+- Bounded memory retrieval in `get_session_context`, using the explicit project
+  directory. Saved entries include source, timestamps and versions.
+- Idempotent writes and optimistic update/delete checks, protected local storage,
+  retention limits and an online backup command.
+- Metadata-only history for synchronous and background commands. Exited-owner
+  records become unknown; persistence errors do not trigger command replay.
+- Balanced revision of global agent instructions: browser/desktop routing,
+  selective memory use, asynchronous recovery and proportional verification.
+  Existing authorization and safety boundaries are retained.
+- Global instructions are returned once in session context; distinct project rules
+  remain ordered and separate. The installed global file and recovery copy match.
 
-## Migration and prerequisites
+## Activation and compatibility
 
-Physical desktop_browser_act clicks require click_scope="reversible". Calls
-without it fail before any input. This declaration is only for low-impact,
-reversible actions; use semantic tools for consequential operations. Hover-only
-move does not require the declaration. Refresh the ChatGPT Local Dev Bridge
-catalogue to load the new schema and instructions.
+The host configuration enables memory inside the existing protected
+`/home/user/.local/state/mcp-integration/bridge-memory` directory. The actual
+SQLite database, backups and saved project notes are not included in this release.
+Python's SQLite build must support FTS5. There are no new Python dependencies.
 
-pointer_verified and hover_verified describe the preceding hover, not click
-success. Inspect click_status, click_target_verified and dispatch_status.
-Even target_hit still requires separate verification of the application effect.
-Consumers must inspect structured receipts even when MCP isError is true.
+See [MEMORY.md](MEMORY.md) for configuration, tools, limits, online backup and
+rollback. On another installation, adapt the database path to a local directory
+inside that installation's denied filesystem subtree. Set `memory.enabled` to false
+to disable memory without deleting it. Retain existing configuration customizations.
 
-The separate Browser MCP service and Chrome extension must already be connected
-at 127.0.0.1:8931/mcp. Their installation is not bundled. The GNOME extension is
-specific to Shell 50 and may require logout/login on first installation. Python
-MCP dependencies use requirements.lock; GI desktop bindings use system Python.
-Existing ops restoration assets cover the original integrations and are not a
-complete installer for the separately configured Browser MCP.
+Refresh/reconnect the ChatGPT Bridge catalogue to load the new tools and revised
+initialization instructions. For deployment of this source, synchronize the global
+instructions using `ops/config/global-agent-instructions.md`, reviewing any local
+customizations first, then restart the Bridge when no owned commands are active.
+All existing MCP function signatures are retained; session context now omits the
+redundant global entry from `project_rules` because it is in `global_instructions`.
 
 ## Validation
 
-Executed for this release:
+Release checks: 84 tests with four expected skips, plus 30 system-Python/GI
+tests passed. The reproducible checks are:
 
-- BRIDGE_SANDBOX_TESTS=1 BRIDGE_SYSTEMD_TESTS=1 ./check.sh: 65 tests, 4 expected
-  skips, plus 30 system-Python/GI tests passed.
-- Isolated headless Chrome guard acceptance: 12 scenarios passed, including
-  post-validation movement and preservation of the first missed-click evidence.
-- Git whitespace validation and credential-pattern review completed. The only
-  credential-URL match was a synthetic diagnostic-redaction test fixture.
+```bash
+BRIDGE_SANDBOX_TESTS=1 BRIDGE_SYSTEMD_TESTS=1 ./check.sh
+.venv/bin/python -B check_memory_mcp.py
+```
 
-User-reported live ChatGPT acceptance, not rerun during publication:
+The MCP acceptance uses temporary storage and two server lifetimes, checking
+checkpoint recovery, duplicate suppression, real synchronous/background commands,
+project isolation, deletion and database protection through file tools/Bubblewrap.
+Instruction checks cover global deduplication, ancestor order, symlinks, missing
+files and current path policy.
 
-- Browser MCP extension communication and new click_scope catalogue confirmed.
-- Missing scope refused, stable target clicked once, moved target refused.
-- Final-gap physical race reproduced: target_missed, ok=false, MCP error,
-  submitted receipt preserved, one outside click and no retry.
-- Navigation destroyed readback: unconfirmed, ok=false, submitted receipt
-  preserved and no retry. Post-navigation counters could not be recovered.
-- Disposable about:blank tabs remained after Browser MCP close/index failures;
-  this separate cleanup limitation was not bypassed with physical input.
+The user separately reported successful memory retrieval in a new ChatGPT
+conversation after following the manual test. This is user-reported acceptance,
+not an automated measurement of model behavior or token savings. Physical-browser
+acceptance from v0.7.0 was not rerun for this memory/instruction release.
 
 ## Known limits
 
-DOM validation and OS dispatch are not atomic. The pointer may hit the wrong
-place if the page/window changes in the final gap. This release reports the
-outcome correctly when evidence exists; it does not eliminate the race.
-Scope is a caller declaration, not automatic classification of page risk.
-Do not bypass scope restrictions with raw input. Other input clients must stay
-idle. Navigation or transport failures can make the outcome indeterminate.
-Real zoom/focus synchronization and controlled loss of a dispatch receipt remain
-separate acceptance work; a green unit/headless suite does not certify them.
+Project identity is the exact canonical directory; subdirectories and moved
+projects are not automatically grouped. Stored context is historical and needs
+revalidation. Credential filtering is best-effort; do not save secrets. Deleting
+entries does not erase independent backups. Agent recall is not guaranteed by
+storage, and the wording revision is not a live behavioral benchmark.
 
-## Previous versions
+Browser/desktop restrictions and the final-gap physical-click race documented in
+[BROWSER_FALLBACK.md](BROWSER_FALLBACK.md) still apply.
 
-The previously published master commit is preserved by the new
-baseline/published-before-v0.7.0 tag. This is an archival marker, not a newly
-validated semantic release. Existing local v0.6.0–v0.6.6 tags are retained and
-published unchanged. No existing tag or release is overwritten.
+## Earlier releases
+
+v0.8.0 is added as the newest release. Existing releases, tags and release assets
+are preserved unchanged. The previous release's source notes are also retained in
+[docs/releases/v0.7.0.md](docs/releases/v0.7.0.md).

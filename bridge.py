@@ -64,7 +64,7 @@ memory = MemoryService(BRIDGE_CONFIG)
 
 app = FastAPI(
     title="ChatGPT Local Bridge",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 
@@ -214,7 +214,7 @@ def command_is_blocked(command: str) -> bool:
 def health():
     return {
         "ok": True,
-        "version": "0.7.0",
+        "version": "0.8.0",
         "workspace": str(WORKSPACE),
         "workspace_exists": WORKSPACE.exists(),
         "command_workspace": str(COMMAND_WORKSPACE),

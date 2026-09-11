@@ -14,7 +14,7 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
-## Local Development Bridge 0.7.0
+## Local Development Bridge 0.8.0
 
 This is a private, host-specific integration backup, not a portable installer.
 The Browser MCP server/Chrome extension is a separate prerequisite at

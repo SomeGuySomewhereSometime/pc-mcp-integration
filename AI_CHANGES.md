@@ -784,3 +784,28 @@ Hosted model behavior after this wording change remains to be observed.
 Private rollback snapshot of the actual pre-edit files (including prior uncommitted
 memory changes): /home/user/.local/state/mcp-integration/instructions-before-20260911T113455Z.
 No commit or push was performed.
+
+## 2026-09-11 — v0.8.0 release preparation
+
+User authorized pushing the current installed Bridge source and adding a new latest
+release while preserving every existing release and tag. Remote repository remains
+private, default branch master; previous remote HEAD was 10a67b52be10b0d5dc1940a77b893fb2efd55300.
+Pre-publication inventory found one release, v0.7.0, plus the existing historical
+and baseline tags. Their metadata and refs were captured privately for post-publish
+comparison under /home/user/.local/state/mcp-integration/release-v0.8.0.
+
+Advanced Bridge version metadata and README heading to 0.8.0. Updated release notes
+for SQLite project memory and revised instructions; archived the exact previous
+source notes in docs/releases/v0.7.0.md. The GitHub v0.7.0 release is not edited.
+No installers, alternate Bridge copies or application integrations are changed.
+Source releases exclude the private SQLite DB, saved notes and local backups.
+
+Validation in this publication session: host-enabled check.sh ran 84 tests with
+four expected skips, plus 30 system-GI tests passed. The two-lifetime stdio memory
+acceptance passed, including real command receipts and protected-database checks. User-reported retrieval in
+a new ChatGPT conversation is identified separately from automated checks. Physical
+browser acceptance was not repeated; existing click limitations still apply.
+Local CLI compatibility: the installed gh does not support api --slurp; inventory
+used explicit paginated GETs instead. No release/tag mutation occurred during that
+retry. Publication uses a new v0.8.0 tag, ordinary non-force push and --latest;
+existing tags/releases/assets must remain unchanged.
