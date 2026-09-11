@@ -14,6 +14,10 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
+## LibreSprite MCP
+
+LibreSprite keeps its own MCP, relay and documentation resources, with `mcp==1.30.0` pinned. See [LIBRESPRITE.md](LIBRESPRITE.md) for readiness, recovery and the separate tunnel.
+
 ## Godot MCP
 
 Godot is an independent MCP managed through lifecycle/readiness only. See [GODOT.md](GODOT.md) for activation, separate tunnel setup, recovery and diagnostics.

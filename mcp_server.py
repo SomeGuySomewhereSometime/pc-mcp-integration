@@ -348,7 +348,7 @@ def memory_delete(cwd: str, entry_id: str, expected_version: int) -> dict:
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False))
 def integration_status() -> dict:
-    """Read bounded health checks for Bridge, Unity, Blender, Browser and Godot MCP. Does not start/stop apps."""
+    """Read bounded health checks for Bridge, Unity, Blender, Browser, Godot and LibreSprite MCP. Does not start/stop apps."""
     import json
     import subprocess
     result = subprocess.run(
@@ -375,6 +375,24 @@ def godot_recover(open_application: bool = False) -> dict:
                             env=bridge.desktop_environment())
     if result.returncode:
         raise RuntimeError("Godot recovery failed; inspect the Godot service journal")
+    return json.loads(result.stdout)
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False))
+def libresprite_recover(open_application: bool = False) -> dict:
+    """Ensure the independent LibreSprite MCP/tunnel run. Optionally open the application
+    only if no LibreSprite instance exists. Never close an app, switch projects or restart
+    a live editor. A disconnected mcp.js may require Connect in the application.
+    """
+    import json
+    import subprocess
+    command = ["/usr/bin/python3", "-B", "/home/user/.local/lib/mcp-integration/libresprite_control.py", "recover"]
+    if open_application:
+        command.append("--open-app")
+    result = subprocess.run(command, capture_output=True, text=True, timeout=75,
+                            env=bridge.desktop_environment())
+    if result.returncode:
+        raise RuntimeError("LibreSprite recovery failed; inspect the LibreSprite service journal")
     return json.loads(result.stdout)
 
 

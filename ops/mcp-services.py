@@ -13,7 +13,7 @@ import urllib.request
 
 PROFILES = {"bridge": ("chatgpt-local-bridge", 8080),
             "unity": ("chatgpt-unity", 8081), "blender": ("chatgpt-blender", 8082),
-            "browser": ("chatgpt-browser", 8083), "godot": ("chatgpt-godot", 8084)}
+            "browser": ("chatgpt-browser", 8083), "godot": ("chatgpt-godot", 8084), "libresprite": ("chatgpt-libresprite", 8085)}
 PROJECT = Path("/home/user/Projects/ExampleGame")
 
 
@@ -105,6 +105,21 @@ def status(selected):
             item['chatgpt_verification'] = 'Requires a successful call from the separate Godot connection in ChatGPT'
             result[name] = item
             continue
+        if name == 'libresprite':
+            from libresprite_control import fetch, editor_pids
+            live, readiness = fetch('live'), fetch('ready')
+            item['tunnel_transport_ready'] = item.pop('tunnel_ready')
+            item.update(readiness)
+            item['mcp_process_present'] = live.get('live', False)
+            item['application_pids'] = editor_pids()
+            item['application'] = bool(item['application_pids'])
+            item['relay'] = probe('http://127.0.0.1:64823/ping')
+            item['integration_ready'] = bool(readiness.get('ready'))
+            item['tunnel_ready'] = {'ok': bool(readiness.get('ready') and item['tunnel_transport_ready']['ok'])}
+            item['chatgpt_available'] = None
+            item['chatgpt_verification'] = 'Requires a successful call from the separate LibreSprite connection in ChatGPT'
+            result[name] = item
+            continue
         if name == 'browser':
             browser_service = subprocess.run(
                 ['systemctl', '--user', 'is-active', 'playwright-browser-mcp.service'],
@@ -154,6 +169,8 @@ def main():
     if args.action != "status":
         if 'godot' in selected and args.action in {'start', 'restart'}:
             subprocess.run(['systemctl', '--user', 'start', 'godot-editor-mcp.service'], check=True, timeout=25)
+        if 'libresprite' in selected and args.action in {'start', 'restart'}:
+            subprocess.run(['systemctl', '--user', 'start', 'libresprite-mcp.service'], check=True, timeout=25)
         units = ["mcp-tunnel-" + PROFILES[n][0] + ".service" for n in selected]
         subprocess.run(["systemctl", "--user", args.action, *units], check=True, timeout=45)
     print(json.dumps(status(selected), indent=2, ensure_ascii=False))

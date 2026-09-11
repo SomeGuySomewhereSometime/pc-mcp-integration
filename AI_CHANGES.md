@@ -899,3 +899,22 @@ Health/readiness returned 200 and a successful control-plane polling timestamp
 confirmed OpenAI communication. Four real local Godot MCP reads passed again.
 Editor preserved. No key value recorded. Separate ChatGPT connection and its
 first tool call remain the final outstanding validation.
+
+
+## 2026-09-12 — LibreSprite independent integration
+
+Added lifecycle-only LibreSprite integration to Bridge and a separate tunnel.
+Reused installed LibreSprite MCP 0.1.3, original run_script/resources and original
+relay. Pinned mcp==1.30.0 and added startup version refusal. Adapter serializes
+script work, keeps HTTP responsive during blocking calls, reports unknown outcomes
+without replay, and requires a real version response for readiness. Added six
+focused health/recovery tests and a read-only MCP acceptance script.
+AppImage and mcp.js were not modified or restarted. User clicked Disconnect/Connect;
+real MCP call returned MCP_TEST_VERSION=1.1-dev. Separate ChatGPT connection test
+remains pending. Godot was previously confirmed end-to-end by the user's ChatGPT test.
+
+Final validation: 116 tests (4 expected skips) plus 30 GI passed. Bridge MCP
+integration_status/libresprite_recover passed; tunnel polling reached OpenAI.
+Godot and Browser real read calls passed; Unity/Blender unchanged unavailable-editor
+baseline. Only Bridge tunnel restarted, app processes preserved. Publishing the
+LibreSprite integration to principal master, with no credentials or document edits.
