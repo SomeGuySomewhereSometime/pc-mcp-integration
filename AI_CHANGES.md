@@ -809,3 +809,83 @@ Local CLI compatibility: the installed gh does not support api --slurp; inventor
 used explicit paginated GETs instead. No release/tag mutation occurred during that
 retry. Publication uses a new v0.8.0 tag, ordinary non-force push and --latest;
 existing tags/releases/assets must remain unchanged.
+
+
+## 2026-09-11 — Codex — OBS recording integration
+
+Integrated OBS directly (no module enable/disable switch), as requested.
+Added obs_control.py, obs_status/obs_start_recording/obs_stop_recording MCP tools,
+an OBS app alias, protected credential references and operator documentation.
+The controller uses the existing websockets dependency with OBS v5 authentication,
+loopback-only client connections, bounded waits, fixed RPC requests and recording
+state readback. Lost mutation receipts are reported as unknown and never replayed.
+Start checks recording-directory write policy; stop reports the OBS output path.
+
+Installed OBS Studio 32.1.0 and the official PipeWire plugin package on this host.
+Added a separate persistent nftables rule for non-loopback TCP port 4455 only;
+existing firewall tables and other MCP services were preserved. Credentials live
+outside Git in protected private files. No installers, GIMP, Unity/Blender plugins,
+existing browser control logic, commits or pushes were changed/performed.
+
+Validation: baseline 84 tests (4 skips) plus 30 GI; final 95 tests (same 4 skips)
+plus 30 GI. Eleven new isolated OBS tests cover authenticated protocol behavior,
+path refusal, malformed replies, rejected requests, unknown outcomes and MCP errors.
+Live MCP status/start/stop produced a 3.233-second H.264/AAC MKV at 1280x720/30 fps
+from a synthetic scene with desktop/microphone muted; decoded frame inspected.
+Original scene and audio mute states restored. Bridge health/readiness returned
+200 after its restart; Unity, Blender and Browser tunnel PIDs stayed unchanged.
+Actual game/desktop capture still requires selecting a source and native Wayland
+consent. Hosted ChatGPT catalogue refresh has not been verified. See OBS.md.
+
+
+## 2026-09-11 — Codex — General desktop video observation
+
+Added obs_extract_frames with native JPEG MCP content, bounded sampling and an
+isolated FFmpeg decoder (no host home/network, read-only opened input). Extended
+MCP instructions to choose semantic tools/static screenshots first and short OBS
+recordings for motion or sequences, honoring the user's recording authorization
+and native capture consent. No automatic continuous recording or feature switch.
+Configured Bridge Desktop/Bridge Screen through OBS and the native user-selected
+PipeWire desktop source. Fits 1920x1080 into 1280x720; desktop/microphone muted for
+visual observation. Original Scene preserved. Real 3-second desktop recording
+and sampled frame visually verified; recording stopped after test.
+
+Validation: 103 tests (4 expected skips) plus 30 GI tests passed. MCP returned 37
+tools and native frames. Three-frame extraction measured 416-464 ms; real desktop
+cycle 4.693 seconds including 3 seconds recording, start 156 ms and stop 1059 ms.
+No claim about hosted latency, complete video coverage or audio analysis. See OBS.md.
+
+
+## 2026-09-11 — Godot independent integration
+
+Added the existing pipx Godot MCP as a standalone HTTP service with addon reconnect,
+real `/live`/`/ready`, lifecycle-only `godot_recover`, `integration_status.godot`,
+separate tunnel template/unit and optional conservative editor launcher. Imported
+the installed Browser status support into the repository so deployment preserves it.
+Files: `ops/godot_entry.py`, `ops/godot_control.py`, `ops/mcp-services.py`,
+three Godot units, Godot tunnel example, `mcp_server.py`, `test_godot_integration.py`,
+`check_godot_live.py`, `GODOT.md`, README. Existing OBS changes were preserved.
+Validation: 7 focused tests; 110 suite tests (16 skips) and 30 GI tests passed.
+Real MCP health/project/active-scene/tree reads passed; Warriors 4.7.2, no open scene.
+Editor PID preserved. Only standalone MCP migrated to service. Cloud tunnel and
+ChatGPT connector validation still pending at this entry; LibreSprite untouched.
+Unity/Blender editor connectivity was already unavailable before changes.
+
+Follow-up validation: sandbox/systemd suite passed 110 tests (4 expected skips),
+plus 30 GI tests. Both Bridge integration tools passed real MCP calls. Restarted
+only Bridge tunnel to load the lifecycle tool; final Bridge health/readiness 200.
+Godot retained PID 120754; other tunnel service PIDs unchanged. `git diff --check`
+passed. No commit/push. Godot cloud association still pending user-supplied ID/key path.
+
+Browser real `browser_tabs` call succeeded after Godot activation; no page URLs or session tokens recorded.
+
+
+## 2026-09-11 — Publish accumulated OBS and Godot work
+
+User authorized publication of prior OBS recording/frame extraction and current
+Godot integration on the principal branch (`master`). Fetched origin and confirmed
+no divergence before publication. Configured supplied Godot tunnel ID
+`tunnel_6aa4830855248191acef5268ad524aea`; key is referenced by private file path
+and remains pending. No key values, recordings or local backups are staged.
+The existing host-enabled suite passed 110 tests (4 expected skips), plus 30 GI.
+No application restart is needed for this profile/publication change.

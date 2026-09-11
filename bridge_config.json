@@ -58,6 +58,20 @@
       ],
       "fresh_data_directory": true,
       "allow_args": false
+    },
+    "obs": {
+      "executable": "/usr/bin/obs",
+      "allow_args": false,
+      "running_executables": [
+        "/usr/bin/obs"
+      ],
+      "fixed_args": [
+        "--profile",
+        "Bridge",
+        "--collection",
+        "Bridge",
+        "--only-bundled-plugins"
+      ]
     }
   },
   "process_kill": {
@@ -94,7 +108,8 @@
       "/home/user/.codex/auth.json",
       "/home/user/.codex/accounts",
       "/home/user/.codex-chatgpt-web",
-      "/home/user/Projects/ExampleGame/UserSettings/AI-Game-Developer-Config.json"
+      "/home/user/Projects/ExampleGame/UserSettings/AI-Game-Developer-Config.json",
+      "/home/user/.config/obs-studio/plugin_config/obs-websocket"
     ],
     "read_only_paths": [
       "/home/user/chatgpt-local-bridge",
@@ -123,5 +138,10 @@
     "retention_days": 30,
     "max_commands": 5000,
     "max_entries_per_project": 2000
+  },
+  "obs": {
+    "host": "127.0.0.1",
+    "port": 4455,
+    "password_file": "/home/user/.config/mcp-integration/obs-password"
   }
 }

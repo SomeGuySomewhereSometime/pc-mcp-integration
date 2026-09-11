@@ -14,6 +14,10 @@ separately. Unity projects, Blender scenes, editor binaries and virtual environm
 are not part of this integration backup. Publishing this repository does not
 change the running installation or the account associated with the tunnels.
 
+## Godot MCP
+
+Godot is an independent MCP managed through lifecycle/readiness only. See [GODOT.md](GODOT.md) for activation, separate tunnel setup, recovery and diagnostics.
+
 ## Local Development Bridge 0.8.0
 
 This is a private, host-specific integration backup, not a portable installer.
@@ -37,6 +41,13 @@ miss and unconfirmed outcome; missed/uncertain clicks return MCP errors with
 structured receipts, never automatic retries. Even a target hit needs a separate
 check of the intended application effect. The DOM-to-OS race remains. See
 BROWSER_FALLBACK.md for the full contract and evidence limits.
+
+### OBS recording
+
+OBS Studio is integrated through `obs_status`, `obs_start_recording` and
+`obs_stop_recording`, plus `obs_extract_frames` for sampled video observation. Open it with `app_launch("obs")`; see [OBS.md](OBS.md)
+for configuration, capture selection and verification. These tools are always
+registered; a closed OBS does not affect other Bridge tools.
 
 ### Persistent project memory
 

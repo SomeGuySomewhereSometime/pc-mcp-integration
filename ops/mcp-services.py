@@ -12,7 +12,8 @@ import subprocess
 import urllib.request
 
 PROFILES = {"bridge": ("chatgpt-local-bridge", 8080),
-            "unity": ("chatgpt-unity", 8081), "blender": ("chatgpt-blender", 8082)}
+            "unity": ("chatgpt-unity", 8081), "blender": ("chatgpt-blender", 8082),
+            "browser": ("chatgpt-browser", 8083), "godot": ("chatgpt-godot", 8084)}
 PROJECT = Path("/home/user/Projects/ExampleGame")
 
 
@@ -67,6 +68,22 @@ def blender_probe():
         raise RuntimeError("addon response too large")
 
 
+async def browser_probe():
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+    # Listing tools does not instantiate Playwright's browser backend. Calling
+    # browser_tabs here could launch Chrome or show an extension approval dialog.
+    async with streamablehttp_client('http://127.0.0.1:8931/mcp', timeout=4) as (read, write, *_):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            catalogue = await session.list_tools()
+            names = {t.name for t in catalogue.tools}
+            return {'mcp': {'browser_tabs', 'browser_fill_form', 'browser_snapshot'} <= names,
+                    'tools': len(names),
+                    'chrome_extension': {'connected': None, 'state': 'not_probed',
+                                         'reason': 'Use a browser action for live verification; health checks do not launch Chrome.'}}
+
+
 def status(selected):
     result = {}
     for name in selected:
@@ -75,6 +92,24 @@ def status(selected):
         service = subprocess.run(["systemctl", "--user", "is-active", unit], capture_output=True, text=True, timeout=5)
         item = {"service": service.stdout.strip(), "tunnel_live": probe(f"http://127.0.0.1:{port}/healthz"),
                 "tunnel_ready": probe(f"http://127.0.0.1:{port}/readyz")}
+        if name == 'godot':
+            from godot_control import fetch, editor_pids
+            live, readiness = fetch('live'), fetch('ready')
+            item['tunnel_transport_ready'] = item.pop('tunnel_ready')
+            item.update(readiness)
+            item['mcp_process_present'] = live.get('live', False)
+            item['editor_pids'] = editor_pids()
+            item['integration_ready'] = bool(readiness.get('ready'))
+            item['tunnel_ready'] = {'ok': bool(readiness.get('ready') and item['tunnel_transport_ready']['ok'])}
+            item['chatgpt_available'] = None
+            item['chatgpt_verification'] = 'Requires a successful call from the separate Godot connection in ChatGPT'
+            result[name] = item
+            continue
+        if name == 'browser':
+            browser_service = subprocess.run(
+                ['systemctl', '--user', 'is-active', 'playwright-browser-mcp.service'],
+                capture_output=True, text=True, timeout=5)
+            item['browser_service'] = browser_service.stdout.strip()
         if name in {"bridge", "blender"}:
             from supervise import has_stdio_child
             marker = b'/chatgpt-local-bridge/mcp_server.py' if name == 'bridge' else b'/mcp-integration/blender_entry.py'
@@ -95,6 +130,8 @@ def status(selected):
                 item.update(asyncio.run(asyncio.wait_for(unity_probe(), 15)))
             elif name == "blender":
                 item.update(blender_probe())
+            elif name == "browser":
+                item.update(asyncio.run(asyncio.wait_for(browser_probe(), 6)))
             else:
                 item["application"] = "filesystem backend; use system_info/get_session_context in ChatGPT for end-to-end verification"
         except Exception as exc:
@@ -115,6 +152,8 @@ def main():
     args = parser.parse_args()
     selected = list(PROFILES) if args.component == "all" else [args.component]
     if args.action != "status":
+        if 'godot' in selected and args.action in {'start', 'restart'}:
+            subprocess.run(['systemctl', '--user', 'start', 'godot-editor-mcp.service'], check=True, timeout=25)
         units = ["mcp-tunnel-" + PROFILES[n][0] + ".service" for n in selected]
         subprocess.run(["systemctl", "--user", args.action, *units], check=True, timeout=45)
     print(json.dumps(status(selected), indent=2, ensure_ascii=False))

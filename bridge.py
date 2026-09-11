@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from security import (checked_path, minimal_environment, run_sandbox, sandbox_network_enabled,
                       validate_filesystem_policy)
 from applications import Application, launch_application
+from obs_control import OBSController
 from diagnostics import redact
 from memory_store import MemoryService
 from command_sessions import sessions as command_sessions
@@ -76,6 +77,9 @@ def safe_path(path: str = ".", *, write: bool = False,
               follow_leaf: bool = True, tree: bool = False) -> Path:
     return checked_path(WORKSPACE, BRIDGE_CONFIG, path, write=write,
                         follow_leaf=follow_leaf, tree=tree)
+
+
+obs_controller = OBSController(BRIDGE_CONFIG, safe_path)
 
 
 def relative(path: Path) -> str:
