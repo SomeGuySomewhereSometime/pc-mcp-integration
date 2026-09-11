@@ -3,6 +3,8 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 export PYTHONDONTWRITEBYTECODE=1
+# Tests must never write production memory; memory tests use isolated stores.
+export BRIDGE_MEMORY_DISABLED=1
 if [[ ! -x .venv/bin/python ]]; then
   echo 'Missing .venv/bin/python; create the Bridge environment from requirements.lock.' >&2
   exit 1

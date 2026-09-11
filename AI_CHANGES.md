@@ -704,3 +704,83 @@ ChatGPT acceptance is recorded separately in RELEASE_NOTES.md, including observe
 miss and lost-readback behavior and remaining disposable tabs. Credential scan
 found only the synthetic URL in a redaction test. Preserve the previous remote
 master under baseline/published-before-v0.7.0 before advancing the branch.
+
+## 2026-09-11 — SQLite project memory and command receipts
+
+Implemented the user's approved project-memory plan in the installed Bridge.
+Added memory_store.py (SQLite/FTS5, versioned transactional schema, bounded storage,
+redaction, idempotent saves, optimistic update/delete versions, online backup,
+process-identity recovery), four MCP memory tools and bounded context retrieval
+through get_session_context. Both synchronous and owned background commands now
+return separate history receipts; automatic history stores metadata, never command
+strings or output. Database failures do not cause commands to be replayed.
+
+Activated the memory section in bridge_config.json, using the existing denied
+subtree /home/user/.local/state/mcp-integration/bridge-memory. New MEMORY.md and
+README documentation cover exact-directory project identity, retention, limits,
+credential-filter limitations, backup and rollback. check.sh disables production
+memory for tests. Added test_memory.py and disposable check_memory_mcp.py.
+
+Validation: 13 new memory/MCP tests passed. The full suite initially caught an
+intermittent concurrent-first-open WAL initialization lock; fixed with a bounded
+retry of that idempotent setup only. Eight repeated concurrent initialization /
+version-conflict tests then passed. Final host-enabled check.sh: 78 tests, four
+expected skips, followed by 30 system-GI tests passed. Real stdio MCP acceptance
+across two server lifetimes verified persisted checkpoint, idempotency, real
+synchronous/background command receipts, project isolation, indexed deletion and
+both file-tool/Bubblewrap protection of the DB. No production DB was used by tests.
+
+Installed-config MCP smoke test saved and recovered one useful source-location
+note under the ChatGptPCbridge project. The online backup CLI succeeded; both DB
+and backup passed integrity_check. Confirmed the old service had only its desktop
+worker, no command jobs, before restarting only the Bridge service. New backend
+PID 351941 was present and localhost:8080 healthz/readyz returned 200.
+
+Private pre-activation rollback copy (clean pre-edit Git HEAD source archive plus
+original local configuration):
+/home/user/.local/state/mcp-integration/bridge-memory/before-memory-20260911T022425Z
+Initial verified DB backup: same parent, initial-verified-20260911.sqlite3.
+
+Limits: hosted ChatGPT catalogue refresh / next-conversation use is not verified.
+Exact project directories are not auto-merged across subdirectories or moves.
+Historical facts require current checks; redaction is best-effort; deletion does
+not erase independent backups. No token-savings claim, commit or push was made.
+Other Bridge distributions and editor/browser integrations were not changed.
+
+## 2026-09-11 — Balanced global instruction revision
+
+Implemented the user's approved revision of /home/user/AGENTS.md and its exact
+recovery copy ops/config/global-agent-instructions.md. Reorganized session setup,
+autonomy, tool selection, implementation, recovery, memory, proportional checks
+and reporting. Added Browser/desktop guidance and selective memory use. Retained
+Git authorization requirements, read-only requests, protected-path/consent rules,
+Unity/Blender ownership and preservation of unrelated work. No tool permissions,
+filesystem policy or execution limits were changed.
+
+The file went from 226 lines / 1488 words to 90 lines / 1495 words: essentially
+unchanged word volume, with consolidated paragraphs and a compact tool table.
+The line reduction is formatting, not a claim of equivalent token savings.
+
+Harmonized effective_instructions in mcp_server.py: removed redundant general
+statements already supplied by the global file and made memory search conditional
+on usefulness. Operational desktop/browser restrictions remain in the MCP text.
+get_session_context now excludes only the canonical global file already returned
+in global_instructions; distinct project files remain in ancestor order, even if
+they happen to contain identical text. Added test_instructions.py for this behavior.
+
+Validation: 15 focused tests passed (six new composition tests, memory MCP roundtrip
+and eight desktop MCP tests). Real stdio MCP initialization and get_session_context
+returned identical revised instructions with the global file once, and the recovery
+copy matched byte-for-byte. Production memory was disabled in this check. Editorial
+scenario review covered analysis-only requests, authorized implementation, uncertain
+clicks, background jobs and session continuation; this is not a live model-behavior
+benchmark. Existing memory implementation edits in the checkout were preserved.
+
+Confirmed no Bridge command children before restarting only its service. Backend
+PID 22850 was present afterward; localhost:8080 healthz and readyz both returned 200.
+An already-open client may retain initialization instructions until reconnecting.
+Hosted model behavior after this wording change remains to be observed.
+
+Private rollback snapshot of the actual pre-edit files (including prior uncommitted
+memory changes): /home/user/.local/state/mcp-integration/instructions-before-20260911T113455Z.
+No commit or push was performed.

@@ -38,6 +38,13 @@ structured receipts, never automatic retries. Even a target hit needs a separate
 check of the intended application effect. The DOM-to-OS race remains. See
 BROWSER_FALLBACK.md for the full contract and evidence limits.
 
+### Persistent project memory
+
+The Bridge supports SQLite project notes, resumable checkpoints and bounded
+command metadata, integrated with `get_session_context`. See [MEMORY.md](MEMORY.md)
+for activation, the four memory tools, project scoping, backup and recovery.
+Memory is historical context; current application state still requires validation.
+
 ### Reproducible installed-checkout checks
 
 Run `./check.sh` from this checkout (or use its absolute path from any directory).

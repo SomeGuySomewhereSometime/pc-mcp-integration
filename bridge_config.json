@@ -116,5 +116,12 @@
   },
   "sandbox": {
     "network": true
+  },
+  "memory": {
+    "enabled": true,
+    "path": "/home/user/.local/state/mcp-integration/bridge-memory/memory.sqlite3",
+    "retention_days": 30,
+    "max_commands": 5000,
+    "max_entries_per_project": 2000
   }
 }

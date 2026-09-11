@@ -19,6 +19,7 @@ from security import (checked_path, minimal_environment, run_sandbox, sandbox_ne
                       validate_filesystem_policy)
 from applications import Application, launch_application
 from diagnostics import redact
+from memory_store import MemoryService
 from command_sessions import sessions as command_sessions
 
 
@@ -59,6 +60,7 @@ def load_bridge_config() -> dict:
 
 
 BRIDGE_CONFIG = load_bridge_config()
+memory = MemoryService(BRIDGE_CONFIG)
 
 app = FastAPI(
     title="ChatGPT Local Bridge",
@@ -406,7 +408,7 @@ def run_command(req: CommandRequest):
     if req.background:
         if req.timeout < 0:
             raise HTTPException(400, 'timeout must be nonnegative; 0 runs until stopped')
-        session = command_sessions.start(COMMAND_WORKSPACE, cwd, BRIDGE_CONFIG, command, req.timeout)
+        session = command_sessions.start(COMMAND_WORKSPACE, cwd, BRIDGE_CONFIG, command, req.timeout, history=memory)
         job = command_sessions.get(session)
         job.done.wait(.1)
         return dict(job.read(), session_id=session, sandboxed=True,
@@ -417,8 +419,15 @@ def run_command(req: CommandRequest):
         min(req.timeout, 300),
     )
 
-    result = run_sandbox(COMMAND_WORKSPACE, cwd, BRIDGE_CONFIG,
-                         ["/bin/bash", "--noprofile", "--norc", "-c", command], timeout=timeout)
+    history = memory.begin(str(cwd))
+    try:
+        result = run_sandbox(COMMAND_WORKSPACE, cwd, BRIDGE_CONFIG,
+                             ["/bin/bash", "--noprofile", "--norc", "-c", command], timeout=timeout)
+    except Exception as exc:
+        timed_out = isinstance(exc, subprocess.TimeoutExpired) or (isinstance(exc, HTTPException) and exc.status_code == 408)
+        memory.finish(str(cwd), history, None, timed_out=timed_out, unknown=True)
+        raise
+    memory.finish(str(cwd), history, result.returncode)
 
     stdout = result.stdout
     stderr = result.stderr
@@ -437,6 +446,7 @@ def run_command(req: CommandRequest):
 
     return {
         "returncode": result.returncode,
+        "history": history,
         "stdout": stdout,
         "stderr": stderr,
         "cwd": str(cwd.relative_to(COMMAND_WORKSPACE)) or ".",

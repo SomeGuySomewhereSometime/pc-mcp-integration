@@ -30,8 +30,9 @@ class Buffer:
 
 
 class Job:
-    def __init__(self, process, timeout, cwd):
+    def __init__(self, process, timeout, cwd, history=None, receipt=None):
         self.process, self.cwd = process, str(cwd)
+        self.history, self.receipt = history, receipt or {'status': 'disabled'}
         self.stdout, self.stderr = Buffer(), Buffer()
         self.done = threading.Event()
         self.signal_lock = threading.Lock()
@@ -86,6 +87,8 @@ class Job:
             for thread in self.readers: thread.join(timeout=.5)
             self._signal(signal.SIGKILL)
             for thread in self.readers: thread.join(timeout=2)
+            if self.history is not None:
+                self.history.finish(self.cwd, self.receipt, self.process.poll(), self.timed_out)
             self.done.set()
 
     def read(self, out_offset=0, err_offset=0, limit=64000):
@@ -94,7 +97,7 @@ class Job:
         return {'running':not self.done.is_set(), 'returncode':self.process.poll(),
                 'stdout':out,'stderr':err,'stdout_offset':out_cursor,'stderr_offset':err_cursor,
                 'output_truncated':out_lost or err_lost, 'timed_out':self.timed_out,
-                'cwd':self.cwd,'started_at':self.started}
+                'cwd':self.cwd,'started_at':self.started, 'history': dict(self.receipt)}
 
 
 class CommandSessions:
@@ -102,7 +105,7 @@ class CommandSessions:
         self.jobs = {}
         self.lock = threading.RLock()
 
-    def start(self, workspace, cwd, config, command, timeout=0):
+    def start(self, workspace, cwd, config, command, timeout=0, history=None):
         with self.lock:
             if len(self.jobs) >= 64:
                 for key, job in list(self.jobs.items()):
@@ -115,12 +118,18 @@ class CommandSessions:
             try:
                 os.write(fd,git_identity_config(cwd,env));os.lseek(fd,0,os.SEEK_SET)
                 argv=sandbox_argv(workspace,cwd,config,['/bin/bash','--noprofile','--norc','-c',command],git_config_fd=fd)
-                process=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,env=env,pass_fds=(fd,),start_new_session=True)
+                receipt = history.begin(str(cwd)) if history is not None else None
+                try:
+                    process=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,env=env,pass_fds=(fd,),start_new_session=True)
+                except Exception:
+                    if history is not None:
+                        history.finish(str(cwd), receipt, None, unknown=True)
+                    raise
             finally:
                 os.close(fd)
             key=uuid.uuid4().hex
-            self.jobs[key]=Job(process,timeout,cwd)
+            self.jobs[key]=Job(process,timeout,cwd,history,receipt)
             return key
 
     def get(self, key):
