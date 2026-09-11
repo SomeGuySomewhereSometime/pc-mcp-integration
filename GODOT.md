@@ -11,7 +11,7 @@ The editor addon owns automatic WebSocket reconnection. No addon/project files c
   `http://127.0.0.1:9090/mcp`, addon WebSocket `127.0.0.1:9080`.
 - `godot-editor-app.service`: optional fixed-project Flatpak launch, only when no
   Godot process exists. Never enabled at login or restarted by recovery.
-- `mcp-tunnel-chatgpt-godot.service`: separate tunnel, configured identity; runtime key still pending;
+- `mcp-tunnel-chatgpt-godot.service`: separate tunnel, configured and active; runtime key stored outside Git;
   raw tunnel health port `127.0.0.1:8084`. Stopping it leaves backend/editor running.
 - Existing Bridge/Unity/Blender/Browser remain on 8080/8081/8082/8083 respectively.
 
@@ -100,7 +100,16 @@ Unity and Blender remain at the unavailable-editor baseline; their services were
 
 The user created `tunnel_6aa4830855248191acef5268ad524aea`. The concrete profile
 is stored in `ops/config/tunnel-client/chatgpt-godot.yaml` and installed under
-`~/.config/tunnel-client/`. The runtime key and ChatGPT connection remain pending.
+`~/.config/tunnel-client/`. The runtime key is installed with mode 0600 and the tunnel is active. The ChatGPT connection remains pending.
 The configured profile alone does not prove cloud reachability.
 OBS recording/frame extraction and Godot integration are published together on
 the existing principal branch `master`; no release/tag or installer changes.
+
+## Tunnel activation verified
+
+The runtime key was validated by file metadata without displaying it.
+`tunnel-client doctor --profile chatgpt-godot --explain` passed. The Godot tunnel
+was enabled at login and started; transport health/readiness and real editor
+readiness returned 200. A completed successful control-plane poll confirmed
+communication with OpenAI. Four real local MCP reads passed again, with 18 tools
+and the same Warriors editor PID. This does not yet prove a ChatGPT tool call.

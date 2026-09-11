@@ -889,3 +889,13 @@ no divergence before publication. Configured supplied Godot tunnel ID
 and remains pending. No key values, recordings or local backups are staged.
 The existing host-enabled suite passed 110 tests (4 expected skips), plus 30 GI.
 No application restart is needed for this profile/publication change.
+
+
+## Godot tunnel activated
+
+After the user saved the runtime key, verified private file metadata (0600),
+ran tunnel doctor successfully and enabled/started only the Godot tunnel.
+Health/readiness returned 200 and a successful control-plane polling timestamp
+confirmed OpenAI communication. Four real local Godot MCP reads passed again.
+Editor preserved. No key value recorded. Separate ChatGPT connection and its
+first tool call remain the final outstanding validation.
