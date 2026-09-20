@@ -1,7 +1,19 @@
 # PC MCP integration
 
-Private backup of the three MCP integrations used to reach this computer from
-ChatGPT: Local Dev Bridge, Unity AI Game Developer and Blender MCP.
+Integration snapshot for using a Linux PC directly from a **ChatGPT conversation**
+through MCP: Local Dev Bridge, Unity AI Game Developer and Blender MCP.
+
+## Use it from ChatGPT chat
+
+**Talk to ChatGPT and let it use your Linux PC through MCP. No Codex task is
+required for this connection.** Enable the Bridge in your ChatGPT conversation;
+ChatGPT calls its local tools to work with files, commands, Git, and connected editors.
+
+The Bridge is a tool server: it does not start a Codex coding session or include
+an AI model. Usage is determined by the ChatGPT mode and plan you use. In particular,
+**ChatGPT Work shares usage limits and credits with Codex**, so this project does
+not promise that every ChatGPT mode is outside your Codex allowance. See
+[OpenAI's current usage and pricing documentation](https://learn.chatgpt.com/docs/pricing).
 
 The repository contains the Bridge source, dependency locks, launchers, process
 supervisor, three user systemd services, tunnel profiles with credential file
@@ -24,7 +36,8 @@ Godot is an independent MCP managed through lifecycle/readiness only. See [GODOT
 
 ## Local Development Bridge 0.8.0
 
-This is a private, host-specific integration backup, not a portable installer.
+This is an integration snapshot with example installation paths. For a portable
+installer, see [PC Bridge Linux](https://github.com/SomeGuySomewhereSometime/pc-bridge-linux).
 The Browser MCP server/Chrome extension is a separate prerequisite at
 `127.0.0.1:8931/mcp`; its installation and credentials are not bundled here.
 The matching GNOME 50 window extension source is included under
